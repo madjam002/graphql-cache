@@ -24,6 +24,9 @@ const User = new GraphQLObjectType({
     about: {
       type: GraphQLString,
     },
+    interests: {
+      type: GraphQLString,
+    },
     friends: {
       type: new GraphQLList(User),
       args: {
@@ -33,6 +36,15 @@ const User = new GraphQLObjectType({
       },
     },
     relatedFriends: {
+      type: new GraphQLList(User),
+    },
+    someOtherConnection: {
+      type: new GraphQLList(User),
+    },
+    andAnotherConnection: {
+      type: new GraphQLList(User),
+    },
+    reallyAnotherConnection: {
       type: new GraphQLList(User),
     },
   }),

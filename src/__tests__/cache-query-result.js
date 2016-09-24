@@ -107,11 +107,42 @@ describe('cacheQueryResult', function () {
             myFriends: friends { id, name }
             sameFriends: friends { id, name }
             otherFriends: friends(limit: 10) { id, name }
+            otherFriendsDynamic: friends(limit: $someLimit) { id, name }
             relatedFriends { id, name }
+            ...Foo
+            ...on User {
+              interests
+            }
             dateOfBirth
           }
         }
+
+        fragment Foo on User {
+          someOtherConnection {
+            id
+            name
+          }
+          ...Baz
+        }
+
+        fragment Bar on User {
+          andAnotherConnection {
+            id
+            name
+          }
+        }
+
+        fragment Baz on User {
+          reallyAnotherConnection {
+            id
+            name
+          }
+        }
       `
+
+      const variables = {
+        someLimit: 2,
+      }
 
       const result = {
         user: {
@@ -119,6 +150,7 @@ describe('cacheQueryResult', function () {
           theUserName: 'John Smith',
           myOtherName: 'John Smith',
           about: null,
+          interests: 'Woop',
           myFriends: [
             { id: '11', name: 'Person 1' },
             { id: '12', name: 'Person 2' },
@@ -139,19 +171,31 @@ describe('cacheQueryResult', function () {
             { id: '15', name: 'Person 5' },
             { id: '16', name: 'Person 6' },
           ],
+          otherFriendsDynamic: [
+            { id: '11', name: 'Person 1' },
+            { id: '12', name: 'Person 2' },
+          ],
           relatedFriends: null,
+          someOtherConnection: [
+            { id: '11', name: 'Person 1' },
+            { id: '12', name: 'Person 2' },
+          ],
+          reallyAnotherConnection: [
+            { id: '11', name: 'Person 1' },
+          ],
           dateOfBirth: '2016-09-20 10:00',
         },
       }
 
       const previousCache = {}
-      const cache = cacheQueryResult(previousCache, query, result)
+      const cache = cacheQueryResult(previousCache, query, result, variables)
 
       expect(cache).to.eql({
         user: {
           id: '10',
           name: 'John Smith',
           about: null,
+          interests: 'Woop',
           friends: [
             { id: '11', name: 'Person 1' },
             { id: '12', name: 'Person 2' },
@@ -166,7 +210,18 @@ describe('cacheQueryResult', function () {
             { id: '15', name: 'Person 5' },
             { id: '16', name: 'Person 6' },
           ],
+          [cacheKey('friends', { limit: 2 })]: [
+            { id: '11', name: 'Person 1' },
+            { id: '12', name: 'Person 2' },
+          ],
           relatedFriends: null,
+          someOtherConnection: [
+            { id: '11', name: 'Person 1' },
+            { id: '12', name: 'Person 2' },
+          ],
+          reallyAnotherConnection: [
+            { id: '11', name: 'Person 1' },
+          ],
           dateOfBirth: '2016-09-20 10:00',
         },
       })

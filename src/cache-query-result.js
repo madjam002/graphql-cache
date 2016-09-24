@@ -1,11 +1,13 @@
 import {visit} from 'graphql/language/visitor'
+import {simplifyAst} from './util/ast'
 
 const VISIT_SKIP_THIS_NODE = false
 
-export function cacheQueryResult(previousCache, query, result) {
+export function cacheQueryResult(previousCache, query, result, queryVariables = null) {
   const cache = {...previousCache}
+  const simplifiedAst = simplifyAst(query, queryVariables)
 
-  visitTree(query, getNewStackFrom(cache), getNewStackFrom(result))
+  visitTree(simplifiedAst, getNewStackFrom(cache), getNewStackFrom(result))
 
   return cache
 }
@@ -100,11 +102,7 @@ function getCacheKey(node) {
   const args = {}
 
   node.arguments.forEach(argument => {
-    // if (argument.value.kind === 'Variable') {
-    //   args[argument.name.value] = variables[argument.value.name.value]
-    // } else {
     args[argument.name.value] = argument.value.value
-    // }
   })
 
   return baseName + '|' + JSON.stringify(args)

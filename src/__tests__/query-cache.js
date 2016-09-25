@@ -74,6 +74,13 @@ describe('queryCache', function () {
             ...Foo
             ...on User {
               interests
+              location {
+                address
+              }
+            }
+            location {
+              longitude
+              latitude
             }
             dateOfBirth
           }
@@ -114,6 +121,11 @@ describe('queryCache', function () {
             { id: '13', name: 'Person 3' },
             { id: '14', name: 'Person 4' },
           ],
+          location: {
+            latitude: '50',
+            longitude: '2',
+            address: 'Hi',
+          },
           [cacheKey('friends', { limit: 10 })]: [
             { id: '11', name: 'Person 1' },
             { id: '12', name: 'Person 2' },
@@ -151,6 +163,11 @@ describe('queryCache', function () {
           myOtherName: 'John Smith',
           about: null,
           interests: 'Woop',
+          location: {
+            latitude: '50',
+            longitude: '2',
+            address: 'Hi',
+          },
           myFriends: [
             { id: '11', name: 'Person 1' },
             { id: '12', name: 'Person 2' },

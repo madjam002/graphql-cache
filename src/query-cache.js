@@ -43,7 +43,9 @@ function visitTree(ast, cacheStack, resultStack) {
 
             return VISIT_SKIP_THIS_NODE
           } else {
-            resultStackTop[resultKey] = {}
+            if (!resultStackTop[resultKey]) {
+              resultStackTop[resultKey] = {}
+            }
 
             pushToStack(cacheStack, cacheStackTop[cacheKey])
             pushToStack(resultStack, resultStackTop[resultKey])

@@ -131,7 +131,7 @@ describe('passThroughQuery', function () {
       user: {
         id: '10',
         name: 'John Smith',
-        interests: 'Hi',
+        interests: null,
         friends: [
           { id: '11', name: 'Person 1' },
           { id: '12', name: 'Person 2' },
@@ -146,11 +146,7 @@ describe('passThroughQuery', function () {
           { id: '15', name: 'Person 5' },
           { id: '16', name: 'Person 6' },
         ],
-        [cacheKey('friends', { limit: 3 })]: [
-          { id: '11', name: 'Person 1' },
-          { id: '12', name: 'Person 2' },
-          { id: '13', name: 'Person 3' },
-        ],
+        [cacheKey('friends', { limit: 3 })]: null,
         relatedFriends: [
           {
             id: '11',

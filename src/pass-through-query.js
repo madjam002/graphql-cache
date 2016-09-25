@@ -68,11 +68,14 @@ function visitTree(rootAst, ast, cacheStack, variables, insideQuery = false) {
             skipAfter = newNode
 
             return newNode
+          } else if (cacheStackTop[cacheKey] === null) {
+            pushToStack(cacheStack, cacheStackTop[cacheKey])
+            return markAsShouldDelete(node)
           } else {
             pushToStack(cacheStack, cacheStackTop[cacheKey])
           }
         } else {
-          if (cacheStackTop[cacheKey]) {
+          if (cacheStackTop[cacheKey] !== undefined) {
             return markAsShouldDelete(node)
           } else {
             return markAsKeep(node)

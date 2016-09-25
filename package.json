@@ -8,6 +8,7 @@
     "watch": "rm -rf lib && babel src --out-dir lib -w --copy-files",
     "lint": "eslint .",
     "unit": "mocha --compilers js:babel-register -r babel-polyfill 'src/**/__tests__/*'",
+    "test": "npm run lint && npm run unit",
     "prepublish": "npm run test && npm run build"
   },
   "repository": {

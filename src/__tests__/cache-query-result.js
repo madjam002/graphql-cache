@@ -3,20 +3,7 @@
 import {expect} from 'chai'
 import gql from 'graphql-tag'
 import {cacheQueryResult} from '../cache-query-result'
-
-function cacheKey(field, args) {
-  if (!args) {
-    return field
-  }
-
-  const stringifiableArgs = {}
-
-  for (const k in args) {
-    stringifiableArgs[k] = args[k].toString()
-  }
-
-  return `${field}|${JSON.stringify(stringifiableArgs)}`
-}
+import {cacheKey} from './util'
 
 describe('cacheQueryResult', function () {
 

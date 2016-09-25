@@ -1,8 +1,18 @@
 import {visit} from 'graphql/language/visitor'
+import {simplifyAst} from './util/ast'
 
 const VISIT_SKIP_THIS_NODE = false
 
-export function visitTree(ast, cacheStack, resultStack, callback) {
+export function queryCache(cache, query, queryVariables = null) {
+  const simplifiedAst = simplifyAst(query, queryVariables)
+  const result = {}
+
+  visitTree(simplifiedAst, getNewStackFrom(cache), getNewStackFrom(result))
+
+  return result
+}
+
+function visitTree(ast, cacheStack, resultStack) {
   visit(ast, {
 
     enter(node, key, parent, path, ancestors) {
@@ -14,20 +24,14 @@ export function visitTree(ast, cacheStack, resultStack, callback) {
         const resultKey = getResultKey(node)
         const selectionSet = node.selectionSet
 
+        if (cacheStackTop[cacheKey] == null) {
+          resultStackTop[resultKey] = null
+          return VISIT_SKIP_THIS_NODE
+        }
+
         if (selectionSet) {
-          if (resultStackTop[resultKey] == null) {
-            cacheStackTop[cacheKey] = resultStackTop[resultKey]
-
-            return VISIT_SKIP_THIS_NODE
-          }
-
-          // ensure immutability if existing data is present
-          if (cacheStackTop[cacheKey] != null) {
-            cacheStackTop[cacheKey] = {...cacheStackTop[cacheKey]}
-          }
-
-          if (Array.isArray(resultStackTop[resultKey])) {
-            cacheStackTop[cacheKey] = [] // always wipe existing arrays in the previous cache
+          if (Array.isArray(cacheStackTop[cacheKey])) {
+            resultStackTop[resultKey] = []
 
             pushToStack(cacheStack, cacheStackTop[cacheKey])
             pushToStack(resultStack, resultStackTop[resultKey])
@@ -39,15 +43,13 @@ export function visitTree(ast, cacheStack, resultStack, callback) {
 
             return VISIT_SKIP_THIS_NODE
           } else {
-            if (!cacheStackTop[cacheKey]) {
-              cacheStackTop[cacheKey] = {}
-            }
+            resultStackTop[resultKey] = {}
 
             pushToStack(cacheStack, cacheStackTop[cacheKey])
             pushToStack(resultStack, resultStackTop[resultKey])
           }
         } else {
-          cacheStackTop[cacheKey] = resultStackTop[resultKey]
+          resultStackTop[resultKey] = cacheStackTop[cacheKey]
         }
       }
     },
@@ -108,11 +110,15 @@ function visitArray(ast, cacheStack, resultStack) {
   const cacheStackTop = getTopOfStack(cacheStack)
   const resultStackTop = getTopOfStack(resultStack)
 
-  resultStackTop.forEach((element, index) => {
-    cacheStackTop[index] = {}
+  cacheStackTop.forEach((element, index) => {
+    resultStackTop[index] = {}
 
-    pushToStack(cacheStack, cacheStackTop[index])
-    visitTree(ast, cacheStack, getNewStackFrom(element))
-    popTopFromStack(cacheStack)
+    pushToStack(cacheStackTop, cacheStackTop[index])
+    pushToStack(resultStackTop, resultStackTop[index])
+
+    visitTree(ast, cacheStackTop, resultStackTop)
+
+    popTopFromStack(cacheStackTop)
+    popTopFromStack(resultStackTop)
   })
 }

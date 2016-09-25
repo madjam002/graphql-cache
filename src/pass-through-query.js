@@ -116,16 +116,7 @@ function visitTreeDeleteNodes(ast) {
         return VISIT_REMOVE_NODE
       }
     },
-    leave(node) {
-      // remove empty fragments
-      if (node.selectionSet && node.selectionSet.selections.length === 0) {
-        return VISIT_REMOVE_NODE
-      }
-
-      if (node.kind === 'InlineFragment' && node.selectionSet === null) {
-        return VISIT_REMOVE_NODE
-      }
-    },
+    leave: removeEmptySelectionSets,
   })
 }
 
@@ -146,6 +137,7 @@ function visitTreeDeleteUnusedFragments(ast) {
         usedFragments.push(nameOfFragment)
       }
     },
+    leave: removeEmptySelectionSets,
   })
 
   return visit(newAst, {
@@ -159,6 +151,17 @@ function visitTreeDeleteUnusedFragments(ast) {
       }
     },
   })
+}
+
+function removeEmptySelectionSets(node) {
+  // remove empty fragments
+  if (node.selectionSet && node.selectionSet.selections.length === 0) {
+    return VISIT_REMOVE_NODE
+  }
+
+  if (node.kind === 'InlineFragment' && node.selectionSet === null) {
+    return VISIT_REMOVE_NODE
+  }
 }
 
 function markAsShouldDelete(node) {

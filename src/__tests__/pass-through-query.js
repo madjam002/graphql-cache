@@ -61,6 +61,36 @@ describe('passThroughQuery', function () {
     expect(newQuery).to.be.null
   })
 
+  it('should take a simple cache state and query with fragments and return null if all data requested is in cache', function () {
+    const query = gql`
+      query($userId: ID!) {
+        user {
+          id
+          name
+          dateOfBirth
+          ...someFragment
+        }
+      }
+
+      fragment someFragment on User {
+        name
+        dateOfBirth
+      }
+    `
+
+    const cache = {
+      user: {
+        id: '10',
+        name: 'John Smith',
+        dateOfBirth: '2016-09-20 10:00',
+      },
+    }
+
+    const newQuery = print(passThroughQuery(cache, query))
+
+    expect(newQuery).to.be.null
+  })
+
   it('should take a complex query and result and return it in a cached format', function () {
     const query = gql`
       fragment Bar on User {

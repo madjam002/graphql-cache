@@ -60,7 +60,7 @@ describe('queryCache', function () {
 
     it('should take a complex query and result and return it in a cached format whilst respecting old cache data', function () {
       const query = gql`
-        query {
+        query($someLimit: Int) {
           user {
             id
             theUserName: name
@@ -204,6 +204,30 @@ describe('queryCache', function () {
         },
       })
     })
+  })
+
+  it('should throw an error if using a variable which hasn\'t been defined', function () {
+    const query = gql`
+      query {
+        user(id: $userId) {
+          id
+          name
+          dateOfBirth
+        }
+      }
+    `
+
+    const cache = {
+      [cacheKey('user', { id: '3' })]: {
+        id: '3',
+        name: 'John Smith',
+        dateOfBirth: 'not late enough',
+      },
+    }
+
+    expect(() => queryCache(cache, query, { userId: 3 })).to.throw(
+      'simplifyAst(): Undefined variable referenced "userId"',
+    )
   })
 
 })

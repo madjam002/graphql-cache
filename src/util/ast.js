@@ -9,10 +9,19 @@ import {visit} from 'graphql/language/visitor'
 export function simplifyAst(ast, variables = {}) {
   let insideQuery = false
 
+  const definedVariables = []
+
   return visit(ast, {
     enter(node, key, parent, path, ancestors) {
       if (node.kind === 'OperationDefinition' && node.operation === 'query') {
         insideQuery = true
+
+        if (node.variableDefinitions) {
+          for (const definition of node.variableDefinitions) {
+            definedVariables.push(definition.variable.name.value)
+          }
+        }
+
         return
       }
 
@@ -27,6 +36,10 @@ export function simplifyAst(ast, variables = {}) {
 
       if (insideQuery && node.kind === 'Variable') {
         const variableName = node.name.value
+
+        if (!definedVariables.includes(variableName)) {
+          throw new Error(`simplifyAst(): Undefined variable referenced "${variableName}"`)
+        }
 
         if (variables[variableName] == null) {
           throw new Error(`simplifyAst(): Variable referenced "${variableName}" but not provided`)

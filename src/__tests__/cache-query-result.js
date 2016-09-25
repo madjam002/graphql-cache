@@ -85,7 +85,7 @@ describe('cacheQueryResult', function () {
 
     it('should take a complex query and result and return it in a cached format', function () {
       const query = gql`
-        query {
+        query($someLimit: Int) {
           user {
             id
             theUserName: name

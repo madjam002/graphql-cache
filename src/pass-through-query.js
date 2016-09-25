@@ -4,8 +4,13 @@ const VISIT_REMOVE_NODE = null
 
 export function passThroughQuery(cache, query, variables) {
   const astPendingDeletion = visitTree(query, query, [cache], variables)
+  const newAst = visitTreeDeleteUnusedFragments(visitTreeDeleteNodes(astPendingDeletion))
 
-  return visitTreeDeleteUnusedFragments(visitTreeDeleteNodes(astPendingDeletion))
+  if (!newAst || (newAst.definitions.length === 0)) {
+    return null
+  }
+
+  return newAst
 }
 
 function visitTree(rootAst, ast, cacheStack, variables, insideQuery = false) {

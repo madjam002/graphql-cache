@@ -53,10 +53,14 @@ function visitTree(rootAst, ast, cacheStack, variables, insideQuery = false) {
 
         const cacheKey = getCacheKey(node, variables)
         const selectionSet = node.selectionSet
+        const cachedValue = cacheStackTop[cacheKey]
 
         if (selectionSet) {
-          if (Array.isArray(cacheStackTop[cacheKey])) {
-            pushToStack(cacheStack, cacheStackTop[cacheKey])
+          if (cachedValue === null || (Array.isArray(cachedValue) && cachedValue.length === 0)) {
+            pushToStack(cacheStack, cachedValue)
+            return markAsShouldDelete(node)
+          } else if (Array.isArray(cachedValue)) {
+            pushToStack(cacheStack, cachedValue)
 
             const res = visitArray(rootAst, node.selectionSet, cacheStack, variables)
 
@@ -68,14 +72,11 @@ function visitTree(rootAst, ast, cacheStack, variables, insideQuery = false) {
             skipAfter = newNode
 
             return newNode
-          } else if (cacheStackTop[cacheKey] === null) {
-            pushToStack(cacheStack, cacheStackTop[cacheKey])
-            return markAsShouldDelete(node)
           } else {
-            pushToStack(cacheStack, cacheStackTop[cacheKey])
+            pushToStack(cacheStack, cachedValue)
           }
         } else {
-          if (cacheStackTop[cacheKey] !== undefined) {
+          if (cachedValue !== undefined) {
             return markAsShouldDelete(node)
           } else {
             return markAsKeep(node)

@@ -100,6 +100,9 @@ describe('passThroughQuery', function () {
           ...on User {
             interests
           }
+          bestFriend {
+            friends { id, name }
+          }
           dateOfBirth
         }
       }
@@ -180,6 +183,9 @@ describe('passThroughQuery', function () {
         reallyAnotherConnection: [
           { id: '20' },
         ],
+        bestFriend: {
+          friends: [],
+        },
       },
     }
 

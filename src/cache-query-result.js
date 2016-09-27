@@ -3,16 +3,16 @@ import {simplifyAst} from './util/ast'
 
 const VISIT_SKIP_THIS_NODE = false
 
-export function cacheQueryResult(previousCache, query, result, queryVariables = null) {
+export function cacheQueryResult(previousCache, query, result, queryVariables = null, ...middleware) {
   const cache = {...previousCache}
   const simplifiedAst = simplifyAst(query, queryVariables)
 
-  visitTree(simplifiedAst, getNewStackFrom(cache), getNewStackFrom(result))
+  visitTree(simplifiedAst, getNewStackFrom(cache), getNewStackFrom(result), middleware)
 
   return cache
 }
 
-function visitTree(ast, cacheStack, resultStack) {
+function visitTree(ast, cacheStack, resultStack, middleware = []) {
   visit(ast, {
 
     enter(node, key, parent, path, ancestors) {
@@ -42,7 +42,7 @@ function visitTree(ast, cacheStack, resultStack) {
             pushToStack(cacheStack, cacheStackTop[cacheKey])
             pushToStack(resultStack, resultStackTop[resultKey])
 
-            visitArray(selectionSet, cacheStack, resultStack)
+            visitArray(selectionSet, cacheStack, resultStack, middleware)
 
             popTopFromStack(cacheStack)
             popTopFromStack(resultStack)
@@ -55,6 +55,10 @@ function visitTree(ast, cacheStack, resultStack) {
 
             pushToStack(cacheStack, cacheStackTop[cacheKey])
             pushToStack(resultStack, resultStackTop[resultKey])
+
+            for (const middlewareFn of middleware) {
+              middlewareFn.enter(node, cacheStack, resultStack)
+            }
           }
         } else {
           cacheStackTop[cacheKey] = resultStackTop[resultKey]
@@ -67,6 +71,10 @@ function visitTree(ast, cacheStack, resultStack) {
         const selectionSet = node.selectionSet
 
         if (selectionSet) {
+          for (const middlewareFn of middleware) {
+            middlewareFn.leave(node, cacheStack, resultStack)
+          }
+
           popTopFromStack(cacheStack)
           popTopFromStack(resultStack)
         }
@@ -114,7 +122,7 @@ function getResultKey(node) {
     : node.name.value
 }
 
-function visitArray(ast, cacheStack, resultStack) {
+function visitArray(ast, cacheStack, resultStack, middleware) {
   const cacheStackTop = getTopOfStack(cacheStack)
   const resultStackTop = getTopOfStack(resultStack)
 
@@ -122,7 +130,7 @@ function visitArray(ast, cacheStack, resultStack) {
     cacheStackTop[index] = {}
 
     pushToStack(cacheStack, cacheStackTop[index])
-    visitTree(ast, cacheStack, getNewStackFrom(element))
+    visitTree(ast, cacheStack, getNewStackFrom(element), middleware)
     popTopFromStack(cacheStack)
   })
 }

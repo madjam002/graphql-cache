@@ -1,5 +1,5 @@
 import {visit} from 'graphql/language/visitor'
-import {simplifyAst} from './util/ast'
+import {simplifyAst, getNewStackFrom, getTopOfStack, pushToStack, popTopFromStack} from './util'
 
 const VISIT_SKIP_THIS_NODE = false
 
@@ -68,22 +68,6 @@ function visitTree(ast, cacheStack, resultStack) {
     },
 
   })
-}
-
-function getNewStackFrom(obj) {
-  return [obj]
-}
-
-function getTopOfStack(stack) {
-  return stack[stack.length - 1]
-}
-
-function pushToStack(stack, obj) {
-  return stack.push(obj)
-}
-
-function popTopFromStack(stack) {
-  return stack.pop()
 }
 
 function getCacheKey(node) {

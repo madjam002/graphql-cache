@@ -3,7 +3,7 @@
 import {expect} from 'chai'
 import gql from 'graphql-tag'
 import {cacheQueryResult} from '../cache-query-result'
-import {cacheKey} from './util'
+import {cacheKey} from '../util'
 
 describe('cacheQueryResult', function () {
 

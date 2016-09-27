@@ -1,4 +1,5 @@
 import {visit} from 'graphql/language/visitor'
+import {getTopOfStack, pushToStack, popTopFromStack} from './util'
 
 const VISIT_REMOVE_NODE = null
 
@@ -201,18 +202,6 @@ function replaceFragment(ast, name, newFragment) {
 
   Object.assign(found, newFragment)
   return
-}
-
-function getTopOfStack(stack) {
-  return stack[stack.length - 1]
-}
-
-function pushToStack(stack, obj) {
-  return stack.push(obj)
-}
-
-function popTopFromStack(stack) {
-  return stack.pop()
 }
 
 function getCacheKey(node, variables) {

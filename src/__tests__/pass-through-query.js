@@ -4,7 +4,7 @@ import {expect} from 'chai'
 import gql from 'graphql-tag'
 import {print} from 'graphql-tag/printer'
 import {passThroughQuery} from '../pass-through-query'
-import {cacheKey} from './util'
+import {cacheKey} from '../util'
 
 describe('passThroughQuery', function () {
 

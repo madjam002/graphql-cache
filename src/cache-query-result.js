@@ -1,5 +1,5 @@
 import {visit} from 'graphql/language/visitor'
-import {simplifyAst} from './util/ast'
+import {simplifyAst, getNewStackFrom, getTopOfStack, pushToStack, popTopFromStack, callMiddleware} from './util'
 
 const VISIT_SKIP_THIS_NODE = false
 
@@ -56,9 +56,7 @@ function visitTree(ast, cacheStack, resultStack, middleware = []) {
             pushToStack(cacheStack, cacheStackTop[cacheKey])
             pushToStack(resultStack, resultStackTop[resultKey])
 
-            for (const middlewareFn of middleware) {
-              middlewareFn.enter(node, cacheStack, resultStack)
-            }
+            callMiddleware(middleware, 'cacheQueryResult', 'enterSelectionSet', node, cacheStack, resultStack)
           }
         } else {
           cacheStackTop[cacheKey] = resultStackTop[resultKey]
@@ -71,9 +69,7 @@ function visitTree(ast, cacheStack, resultStack, middleware = []) {
         const selectionSet = node.selectionSet
 
         if (selectionSet) {
-          for (const middlewareFn of middleware) {
-            middlewareFn.leave(node, cacheStack, resultStack)
-          }
+          callMiddleware(middleware, 'cacheQueryResult', 'leaveSelectionSet', node, cacheStack, resultStack)
 
           popTopFromStack(cacheStack)
           popTopFromStack(resultStack)
@@ -82,22 +78,6 @@ function visitTree(ast, cacheStack, resultStack, middleware = []) {
     },
 
   })
-}
-
-function getNewStackFrom(obj) {
-  return [obj]
-}
-
-function getTopOfStack(stack) {
-  return stack[stack.length - 1]
-}
-
-function pushToStack(stack, obj) {
-  return stack.push(obj)
-}
-
-function popTopFromStack(stack) {
-  return stack.pop()
 }
 
 function getCacheKey(node) {

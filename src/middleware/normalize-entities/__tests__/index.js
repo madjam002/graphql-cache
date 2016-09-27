@@ -3,10 +3,10 @@
 import {expect} from 'chai'
 import gql from 'graphql-tag'
 import {cacheQueryResult} from '../../../cache-query-result'
-import {cacheKey} from '../../../__tests__/util'
+import {cacheKey} from '../../../util'
 import {normalizeEntities} from '../index'
 
-describe.only('middleware/normalize-entities', function () {
+describe('middleware/normalize-entities', function () {
 
   describe('cacheQueryResult', function () {
     it('should normalize entities in a simple query', function () {

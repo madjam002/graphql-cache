@@ -7,6 +7,10 @@ import {
   fieldsInSelectionSet,
 } from '../../util'
 
+function isEntity(maybeEntity) {
+  return maybeEntity && maybeEntity.id
+}
+
 function pushNodeToTopOfStack(cacheStack, node) {
   const rootCache = cacheStack[0]
   const nodeCacheKey = cacheKey('node', { id: node.id })
@@ -25,7 +29,7 @@ export const normalizeEntities = {
     enterSelectionSet(node, cacheStack, resultStack) {
       const result = getTopOfStack(resultStack)
 
-      if (result.id) {
+      if (isEntity(result)) {
         // got entity
 
         // set id on original tree in cache so it points to node
@@ -38,7 +42,7 @@ export const normalizeEntities = {
     leaveSelectionSet(node, cacheStack, resultStack) {
       const result = getTopOfStack(resultStack)
 
-      if (result.id) {
+      if (isEntity(result)) {
         popTopFromStack(cacheStack)
       }
     },
@@ -48,7 +52,7 @@ export const normalizeEntities = {
     enterSelectionSet(node, cacheStack) {
       const result = getTopOfStack(cacheStack)
 
-      if (result.id) {
+      if (isEntity(result)) {
         // got entity
         pushNodeToTopOfStack(cacheStack, result)
       }
@@ -56,7 +60,7 @@ export const normalizeEntities = {
     leaveSelectionSet(node, cacheStack) {
       const result = getTopOfStack(cacheStack)
 
-      if (result.id) {
+      if (isEntity(result)) {
         popTopFromStack(cacheStack)
 
         const fields = fieldsInSelectionSet(node)
@@ -74,7 +78,7 @@ export const normalizeEntities = {
     enterSelectionSet(node, cacheStack) {
       const result = getTopOfStack(cacheStack)
 
-      if (result.id) {
+      if (isEntity(result)) {
         // got entity
         pushNodeToTopOfStack(cacheStack, result)
       }
@@ -83,7 +87,7 @@ export const normalizeEntities = {
     leaveSelectionSet(node, cacheStack) {
       const result = getTopOfStack(cacheStack)
 
-      if (result.id) {
+      if (isEntity(result)) {
         popTopFromStack(cacheStack)
       }
     },

@@ -18,6 +18,11 @@ describe('middleware/normalize-entities', function () {
             name
             dateOfBirth
           }
+
+          otherUser {
+            id
+            name
+          }
         }
       `
 
@@ -27,6 +32,7 @@ describe('middleware/normalize-entities', function () {
           name: 'John Smith',
           dateOfBirth: '2016-09-20 10:00',
         },
+        otherUser: null,
       }
 
       const previousCache = {}
@@ -41,6 +47,7 @@ describe('middleware/normalize-entities', function () {
         user: {
           id: '10',
         },
+        otherUser: null,
       })
     })
 
@@ -149,6 +156,11 @@ describe('middleware/normalize-entities', function () {
             interests
             about
           }
+
+          otherUser {
+            id
+            name
+          }
         }
       `
 
@@ -171,6 +183,10 @@ describe('middleware/normalize-entities', function () {
             id
             dateOfBirth
             about
+          }
+          otherUser {
+            id
+            name
           }
         }
       `))

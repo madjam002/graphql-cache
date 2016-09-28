@@ -102,12 +102,6 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
         const selectionSet = node.selectionSet
         const cachedValue = cacheStackTop[cacheKey]
 
-        const middlewareResult = callMiddleware(middleware, 'passThroughQuery', 'enterField', node, cacheStack, cacheKey)
-
-        if (middlewareResult !== undefined) {
-          return middlewareResult
-        }
-
         if (selectionSet) {
           if (cachedValue === null || (Array.isArray(cachedValue) && cachedValue.length === 0)) {
             return markAsShouldDelete(node)
@@ -132,6 +126,12 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
             callMiddleware(middleware, 'passThroughQuery', 'enterSelectionSet', node, cacheStack)
           }
         } else {
+          const middlewareResult = callMiddleware(middleware, 'passThroughQuery', 'enterField', node, cacheStack, cacheKey)
+
+          if (middlewareResult !== undefined) {
+            return middlewareResult
+          }
+
           if (cachedValue !== undefined) {
             return markAsShouldDelete(node)
           } else {

@@ -210,6 +210,7 @@ describe('middleware/session-validation', function () {
               name
               about
               interests
+              picture { url }
             }
             friends {
               name
@@ -237,10 +238,14 @@ describe('middleware/session-validation', function () {
               name: 'mysession',
               about: 'mysession',
               interests: 'lastsession',
+              picture: 'lastsession',
             },
             name: 'Person 1',
             about: 'umm',
             interests: 'none',
+            picture: {
+              url: 'http://',
+            },
           },
           friends: [
             {
@@ -274,6 +279,9 @@ describe('middleware/session-validation', function () {
             about
             bestFriend {
               interests
+              picture {
+                url
+              }
             }
             friends {
               about

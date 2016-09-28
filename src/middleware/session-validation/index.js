@@ -28,8 +28,8 @@ export const sessionValidation = (opts = { sessionId: null }) => ({
       const data = getTopOfStack(cacheStack)
       const meta = data[STORAGE_KEY]
 
-      if (meta && meta[cacheKey] != null && meta[cacheKey] !== opts.sessionId) {
-        // refetch as it's from another session
+      if (!meta || !meta[cacheKey] || (meta[cacheKey] != null && meta[cacheKey] !== opts.sessionId)) {
+        // refetch as it's from another session or there's no session associated with it
         return markAsKeep(node)
       }
     },

@@ -58,8 +58,9 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
 
         if (selectionSet) {
           if (cachedValue === null || (Array.isArray(cachedValue) && cachedValue.length === 0)) {
-            pushToStack(cacheStack, cachedValue)
             return markAsShouldDelete(node)
+          } else if (cachedValue === undefined) {
+            return false
           } else if (Array.isArray(cachedValue)) {
             pushToStack(cacheStack, cachedValue)
 
@@ -100,7 +101,7 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
         return
       }
 
-      if (node.kind === 'Field') {
+      if (node.kind === 'Field' && !isMarkedForDeletion(node)) {
         const selectionSet = node.selectionSet
 
         if (selectionSet) {
@@ -121,7 +122,7 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
 function visitTreeDeleteNodes(ast) {
   return visit(ast, {
     enter(node) {
-      if (node.__shouldDelete && node.kind === 'Field') {
+      if (isMarkedForDeletion(node) && node.kind === 'Field') {
         return VISIT_REMOVE_NODE
       }
     },
@@ -187,6 +188,10 @@ function markAsKeep(node) {
     ...node,
     __shouldDelete: false,
   }
+}
+
+function isMarkedForDeletion(node) {
+  return node && node.__shouldDelete === true
 }
 
 function getFragment(ast, name) {

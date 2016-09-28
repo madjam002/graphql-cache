@@ -155,6 +155,9 @@ describe('middleware/normalize-entities', function () {
             dateOfBirth
             interests
             about
+            location {
+              address { street { name } }
+            }
           }
 
           otherUser {
@@ -183,6 +186,9 @@ describe('middleware/normalize-entities', function () {
             id
             dateOfBirth
             about
+            location {
+              address { street { name } }
+            }
           }
           otherUser {
             id
@@ -195,10 +201,124 @@ describe('middleware/normalize-entities', function () {
     it('should take a simple cache state and query and return null if all data requested is in cache', function () {
       const query = gql`
         query {
+          user(id: $userId) {
+            id
+            name
+            dateOfBirth
+            friend {
+              id
+              name
+            }
+          }
+        }
+      `
+
+      const variables = { userId: '10' }
+
+      const cache = {
+        [cacheKey('node', { id: '10' })]: {
+          id: '10',
+          name: 'John Smith',
+          dateOfBirth: '2016-09-20 10:00',
+          friend: {
+            id: '11',
+          },
+        },
+        [cacheKey('node', { id: '11' })]: {
+          id: '11',
+          name: 'Person 1',
+        },
+        [cacheKey('user', { id: '10' })]: {
+          id: '10',
+        },
+      }
+
+      const newQuery = passThroughQuery(cache, query, variables, normalizeEntities)
+
+      expect(newQuery).to.be.null
+    })
+
+    it('should take a simple cache state with normalized entities and query with variables and remove unnecessary fields', function () {
+      const query = gql`
+        query {
+          user(id: $userId) {
+            id
+            name
+            dateOfBirth
+            interests
+            about
+            friend {
+              id
+              name
+            }
+          }
+
+          otherUser {
+            id
+            name
+          }
+        }
+      `
+
+      const variables = { userId: '10' }
+
+      const cache = {
+        [cacheKey('node', { id: '10' })]: {
+          id: '10',
+          name: 'John Smith',
+          interests: 'Hi',
+          friend: {
+            id: '11',
+          },
+        },
+        [cacheKey('node', { id: '11' })]: {
+          id: '11',
+          name: 'Person 1',
+        },
+        [cacheKey('user', { id: '10' })]: {
+          id: '10',
+        },
+      }
+
+      const newQuery = print(passThroughQuery(cache, query, variables, normalizeEntities))
+
+      expect(newQuery).to.equal(print(gql`
+        query {
+          user(id: $userId) {
+            id
+            dateOfBirth
+            about
+          }
+          otherUser {
+            id
+            name
+          }
+        }
+      `))
+    })
+
+    it('should take a cache state and query with fragments and remove unnecessary fields', function () {
+      const query = gql`
+        query {
           user {
             id
             name
             dateOfBirth
+            interests
+            ...User
+            about
+          }
+
+          otherUser {
+            id
+            name
+          }
+        }
+
+        fragment User on User {
+          tags {
+            primary { name }
+            secondary { name }
           }
         }
       `
@@ -207,16 +327,36 @@ describe('middleware/normalize-entities', function () {
         [cacheKey('node', { id: '10' })]: {
           id: '10',
           name: 'John Smith',
-          dateOfBirth: '2016-09-20 10:00',
+          interests: 'Hi',
         },
         user: {
           id: '10',
         },
       }
 
-      const newQuery = passThroughQuery(cache, query, null, normalizeEntities)
+      const newQuery = print(passThroughQuery(cache, query, null, normalizeEntities))
 
-      expect(newQuery).to.be.null
+      expect(newQuery).to.equal(print(gql`
+        query {
+          user {
+            id
+            dateOfBirth
+            ...User
+            about
+          }
+          otherUser {
+            id
+            name
+          }
+        }
+
+        fragment User on User {
+          tags {
+            primary { name }
+            secondary { name }
+          }
+        }
+      `))
     })
 
     it('should take a complex cache state with normalized entities and query and remove unnecessary fields', function () {

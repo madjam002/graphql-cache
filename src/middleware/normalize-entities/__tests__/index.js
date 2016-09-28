@@ -275,6 +275,7 @@ describe('middleware/normalize-entities', function () {
             interests
             about
             friend {
+              ...Friend
               id
               name
             }
@@ -284,6 +285,11 @@ describe('middleware/normalize-entities', function () {
             id
             name
           }
+        }
+
+        fragment Friend on User {
+          dateOfBirth
+          interests
         }
       `
 
@@ -301,6 +307,8 @@ describe('middleware/normalize-entities', function () {
         [cacheKey('node', { id: '11' })]: {
           id: '11',
           name: 'Person 1',
+          interests: 'GraphQL',
+          dateOfBirth: 'someday',
         },
         [cacheKey('user', { id: '10' })]: {
           id: '10',

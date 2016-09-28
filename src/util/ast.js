@@ -87,7 +87,7 @@ export function fieldsInSelectionSet(node) {
   invariant(node.selectionSet, 'queryForField(): node does not have selectionSet')
 
   return node.selectionSet.selections
-  .filter(node => !node.__shouldDelete && node.name)
+  .filter(node => node.kind === 'Field' && !node.__shouldDelete && node.name)
   .filter(node => !node.selectionSet || fieldsInSelectionSet(node).length > 0)
   .map(node => node.name.value)
 }

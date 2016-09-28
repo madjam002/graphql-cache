@@ -12,7 +12,13 @@ import {
 const VISIT_REMOVE_NODE = null
 
 export function passThroughQuery(cache, query, variables = null, ...middleware) {
-  const astPendingDeletion = visitTree(query, query, [cache], variables, middleware)
+  // stop ast from being mutated
+  const rootAst = {
+    ...query,
+    definitions: query.definitions.map(def => ({ ...def })),
+  }
+
+  const astPendingDeletion = visitTree(rootAst, rootAst, [cache], variables, middleware)
   let newAst = visitTreeDeleteUnusedFragments(visitTreeDeleteNodes(astPendingDeletion))
 
   // allow for middleware to have "after" hooks to change AST

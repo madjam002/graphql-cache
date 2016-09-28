@@ -206,7 +206,7 @@ describe('middleware/session-validation', function () {
             name
             dateOfBirth
             about
-            interests
+            ...Foo
             bestFriend {
               name
               about
@@ -218,6 +218,10 @@ describe('middleware/session-validation', function () {
               about
             }
           }
+        }
+
+        fragment Foo on User {
+          interests
         }
       `
 

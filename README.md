@@ -13,10 +13,20 @@ This library doesn't enforce state and you are responsible for handling the cach
 
 ## Usage
 
+Start off by initialising your cache. The cache is just a simple Javascript object. You can pass it around, persist it to disk so it can be restored for the next user session, or pass a stringified version of it down from a server side render to the client.
+
 ```js
-import {cacheQueryResult, queryCache, passThroughQuery} from 'graphql-cache'
+let cache = {}
+```
+
+All methods which operate on the cache are immutable, meaning you'll get a new cache instance back every time.
+
+The first thing you'll want to do is populate the cache from a GraphQL query sent to the server. You are responsible for sending the query to the server and getting the result.
+
+For example (this uses the `graphql-tag` library):
+
+```js
 import gql from 'graphql-tag'
-import {print} from 'graphql-tag/printer'
 
 const query = gql`
   query {
@@ -27,8 +37,6 @@ const query = gql`
   }
 `
 
-// This is just a quick example demonstrating fetching from a GraphQL server
-
 const response = await fetch(/* your graph API */, {
   headers: {
     'Content-Type': 'application/json',
@@ -37,26 +45,31 @@ const response = await fetch(/* your graph API */, {
 })
 
 const result = await response.json()
+```
 
-// Store the result in a cache object
+`result` would be something like this:
 
-let cache = {} // empty cache to start with
-
-cache = cacheQueryResult(cache, query, result) // cacheQueryResult is immutable
-
-// We can now query the cache directly
-const localQuery = queryCache(cache, gql`
-  query {
-    user {
-      name
+```js
+{
+  data: {
+    user: {
+      id: '10',
+      name: 'John Smith'
     }
   }
-`)
+}
+```
 
-// Now when we go to fetch another query from the server, we can skip fields which have already
-// been fetched and are in the cache
+Now to get this data into the cache, we need to pass in the current cache (which at the moment is an empty object `{}`), the result data above, and also the original query:
 
-const newQuery = passThroughQuery(cache, gql`
+```js
+cache = cacheQueryResult(cache, query, result.data) // cacheQueryResult is immutable
+```
+
+The result of that query is now cached. Next time you want to make a query to a GraphQL server, you need to run the query through `passThroughQuery` so that any fields which are already in the cache are removed from the query:
+
+```js
+const nextQuery = gql`
   query {
     user {
       id
@@ -64,32 +77,125 @@ const newQuery = passThroughQuery(cache, gql`
       about
     }
   }
-`)
+`
 
-/**
- * newQuery: (id and name are in the cache)
- *
- *  query {
- *    user {
- *      about
- *    }
- *  }
- */
-
-const newResult = /* fetch from the graphql server again with newQuery */
-
-cache = cacheQueryResult(cache, newQuery, newResult)
+const queryForServer = passThroughQuery(cache, nextQuery)
 ```
 
-All methods which manipulate the cache are immutable (at the moment it's just `cacheQueryResult` which manipulates the cache).
+`queryForServer` would now be something like:
 
-This means that you can easily revert the cache to an old state.
+```graphql
+{
+  query {
+    user {
+      about
+    }
+  }
+}
+```
+
+Notice how the `id` and `name` fields have been removed since they're in the cache.
+
+You can now send `queryForServer` off to your GraphQL server, and pass the result through `cacheQueryResult` just like we did earlier.
+
+The `cache` will now contain the data from both queries. You can query the cache by doing:
+
+```js
+const query = gql`
+  query {
+    user {
+      name
+      about
+    }
+  }
+`
+
+const data = queryCache(cache, query)
+```
+
+```js
+{
+  name: 'John Smith',
+  about: 'Foo',
+}
+```
+
+
+## Middleware
+
+There is currently a very simple middleware API which is likely to change in the future.
+This allows for things like entity normalization and pagination to be pluggined in a modular way.
+
+At the moment, the only example of middleware is entity normalization.
+
+### Entity normalization
+
+```js
+const query = gql`
+  query {
+    user {
+      id
+      name
+      about
+    }
+    theSameUser {
+      id
+      interests
+    }
+  }
+`
+
+const variables = {}
+
+const data = {
+  user: {
+    id: '10',
+    name: 'John Smith',
+    about: 'Foo',
+  },
+  theSameUser: {
+    id: '10',
+    interests: 'GraphQL',
+  },
+}
+
+const cache = cacheQueryResult({}, query, data, variables, normalizeEntitiesMiddleware)
+
+const result = queryCache(cache, gql`
+  query {
+    user {
+      interests # this was originally on theSameUser, not user.
+    }
+  }
+`, variables, normalizeEntitiesMiddleware)
+
+// result:
+{
+  user: {
+    interests: 'GraphQL',
+  },
+}
+```
+
+## API
+
+### cacheQueryResult(previousCache: Object, query: DocumentAST, data: Object, variables: ?Object, ...middleware: ?Middleware): Object
+
+Takes a `previousCache` object, `query` AST and `data` from the server (or any other GraphQL source), and merges `data` into the cache immutably.
+
+`variables` should be the variables sent along with the `query`, if any.
+
+### passThroughQuery(cache: Object, query: DocumentAST, variables: ?Object, ...middleware: ?Middleware): ?DocumentAST
+
+Takes a `query` AST and returns a new query AST with fields removed based on what's already in the cache. If there is nothing left to query, `null` will be returned.
+
+### queryCache(cache: Object, query: DocumentAST, variables: ?Object, ...middleware: ?Middleware): Object
+
+Runs the given `query` against the `cache`. Variables can also be provided.
 
 ## Roadmap
 
-- Middleware for features like:
-  - Entity normalizing
-  - Efficient pagination/connections
+- Middleware for efficient pagination and connections
 - More docs
 - More tests
 

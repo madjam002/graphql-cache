@@ -62,6 +62,26 @@ export function simplifyAst(ast, variables = {}) {
   })
 }
 
+export function markAsShouldDelete(node) {
+  if (node.__shouldDelete !== undefined) return
+
+  return {
+    ...node,
+    __shouldDelete: true,
+  }
+}
+
+export function markAsKeep(node) {
+  return {
+    ...node,
+    __shouldDelete: false,
+  }
+}
+
+export function isMarkedForDeletion(node) {
+  return node && node.__shouldDelete === true
+}
+
 /**
  * Returns a new node with selectionSet, where the selectionSet will contain
  * the given field.

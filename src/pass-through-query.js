@@ -1,5 +1,13 @@
 import {visit} from 'graphql/language/visitor'
-import {getTopOfStack, pushToStack, popTopFromStack, callMiddleware} from './util'
+import {
+  getTopOfStack,
+  pushToStack,
+  popTopFromStack,
+  callMiddleware,
+  markAsKeep,
+  markAsShouldDelete,
+  isMarkedForDeletion,
+} from './util'
 
 const VISIT_REMOVE_NODE = null
 
@@ -93,6 +101,12 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
         const cacheKey = getCacheKey(node, variables)
         const selectionSet = node.selectionSet
         const cachedValue = cacheStackTop[cacheKey]
+
+        const middlewareResult = callMiddleware(middleware, 'passThroughQuery', 'enterField', node, cacheStack, cacheKey)
+
+        if (middlewareResult !== undefined) {
+          return middlewareResult
+        }
 
         if (selectionSet) {
           if (cachedValue === null || (Array.isArray(cachedValue) && cachedValue.length === 0)) {
@@ -210,26 +224,6 @@ function removeEmptySelectionSets(node) {
   if (node.kind === 'InlineFragment' && node.selectionSet === null) {
     return VISIT_REMOVE_NODE
   }
-}
-
-function markAsShouldDelete(node) {
-  if (node.__shouldDelete !== undefined) return
-
-  return {
-    ...node,
-    __shouldDelete: true,
-  }
-}
-
-function markAsKeep(node) {
-  return {
-    ...node,
-    __shouldDelete: false,
-  }
-}
-
-function isMarkedForDeletion(node) {
-  return node && node.__shouldDelete === true
 }
 
 function getFragment(ast, name) {

@@ -27,5 +27,9 @@ export function callMiddleware(middleware, fnName, subFunc, node, ...otherArgs) 
     }
   }
 
+  if (newNode === node) {
+    return undefined
+  }
+
   return newNode
 }

@@ -66,6 +66,11 @@ describe('middleware/normalize-entities', function () {
               }
             }
 
+            otherUsers {
+              id
+              name
+            }
+
             nestedUser {
               id
               about
@@ -98,6 +103,16 @@ describe('middleware/normalize-entities', function () {
               },
             },
           ],
+          otherUsers: [
+            {
+              id: '13',
+              name: 'Person 3',
+            },
+            {
+              id: '14',
+              name: 'Person 4',
+            },
+          ],
           nestedUser: {
             id: '10',
             about: 'Same user inside itself.',
@@ -123,6 +138,10 @@ describe('middleware/normalize-entities', function () {
             { user: { id: '11' } },
             { user: { id: '12' } },
           ],
+          otherUsers: [
+            { id: '13' },
+            { id: '14' },
+          ],
           nestedUser: {
             id: '10',
           },
@@ -134,6 +153,14 @@ describe('middleware/normalize-entities', function () {
         [cacheKey('node', { id: '12' })]: {
           id: '12',
           name: 'Person 2',
+        },
+        [cacheKey('node', { id: '13' })]: {
+          id: '13',
+          name: 'Person 3',
+        },
+        [cacheKey('node', { id: '14' })]: {
+          id: '14',
+          name: 'Person 4',
         },
         user: {
           id: '10',
@@ -374,6 +401,11 @@ describe('middleware/normalize-entities', function () {
               }
             }
 
+            otherUsers {
+              id
+              name
+            }
+
             nestedUser {
               id
               about
@@ -399,6 +431,10 @@ describe('middleware/normalize-entities', function () {
             { user: { id: '11' } },
             { user: { id: '12' } },
           ],
+          otherUsers: [
+            { id: '13' },
+            { id: '14' },
+          ],
           nestedUser: {
             id: '10',
           },
@@ -410,6 +446,14 @@ describe('middleware/normalize-entities', function () {
         [cacheKey('node', { id: '12' })]: {
           id: '12',
           // name is missing!!
+        },
+        [cacheKey('node', { id: '13' })]: {
+          id: '13',
+          name: 'Person 3',
+        },
+        [cacheKey('node', { id: '14' })]: {
+          id: '14',
+          name: 'Person 4',
         },
         user: {
           id: '10',
@@ -438,6 +482,180 @@ describe('middleware/normalize-entities', function () {
               about
             }
           }
+        }
+      `))
+    })
+
+    it('should take a complex cache state and query with fragments and arrays and remove unnecessary fields', function () {
+      const query = gql`
+        fragment Bar on User {
+          andAnotherConnection {
+            id
+            name
+          }
+        }
+
+        fragment Foo on User {
+          someOtherConnection {
+            id
+            name
+          }
+          ...Baz
+        }
+
+        query {
+          user {
+            id
+            theUserName: name
+            myOtherName: name
+            about
+            myFriends: friends { id, name }
+            sameFriends: friends { id, name }
+            otherFriends: friends(limit: 10) { id, name }
+            otherFriendsDynamic: friends(limit: $someLimit) { id, name }
+            moreFriendsDynamic: friends(limit: $someOtherLimit) { id, name }
+            relatedFriends {
+              id
+              name
+              friends(limit: $justOne) { name }
+              ...Another
+              ...AndAnother
+            }
+            ...Foo
+            ...on User {
+              interests
+            }
+            bestFriend {
+              friends { id, name, tags { name } }
+            }
+            dateOfBirth
+          }
+        }
+
+        fragment Baz on User {
+          reallyAnotherConnection {
+            id
+            name
+          }
+        }
+
+        fragment Another on User {
+          about
+          interests
+        }
+
+        fragment AndAnother on User {
+          id
+        }
+      `
+
+      const variables = {
+        justOne: 1,
+        someLimit: 2,
+        someOtherLimit: 3,
+      }
+
+      const cache = {
+        [cacheKey('node', { id: '10' })]: {
+          id: '10',
+          name: 'John Smith',
+          interests: null,
+          friends: [
+            { id: '11' },
+            { id: '12' },
+            { id: '13' },
+            { id: '14' },
+          ],
+          [cacheKey('friends', { limit: 10 })]: [
+            { id: '11' },
+            { id: '12' },
+            { id: '13' },
+            { id: '14' },
+            { id: '15' },
+            { id: '16' },
+          ],
+          [cacheKey('friends', { limit: 3 })]: null,
+          relatedFriends: [
+            { id: '11' },
+            { id: '12' },
+            { id: '13' },
+          ],
+          someOtherConnection: [
+            { name: 'Person 1' },
+            { name: 'Person 2' },
+          ],
+          reallyAnotherConnection: [
+            { id: '20' },
+          ],
+          bestFriend: {
+            friends: [],
+          },
+        },
+        [cacheKey('node', { id: '11' })]: {
+          id: '11', name: 'Person 1',
+          [cacheKey('friends', { limit: 1 })]: [
+            { id: '12', name: 'Person 2' },
+          ],
+          interests: 'Some',
+        },
+        [cacheKey('node', { id: '12' })]: {
+          id: '12', name: 'Person 2',
+          [cacheKey('friends', { limit: 1 })]: [
+            { id: '11' },
+          ],
+          interests: 'Some',
+        },
+        [cacheKey('node', { id: '13' })]: {
+          id: '13', name: 'Person 3',
+          [cacheKey('friends', { limit: 1 })]: [
+            { id: '11' },
+          ],
+          interests: 'Some',
+        },
+        [cacheKey('node', { id: '14' })]: {
+          id: '14', name: 'Person 4',
+        },
+        [cacheKey('node', { id: '15' })]: {
+          id: '15', name: 'Person 5',
+        },
+        [cacheKey('node', { id: '16' })]: {
+          id: '16', name: 'Person 6',
+        },
+        user: {
+          id: '10',
+        },
+      }
+
+      const newQuery = print(passThroughQuery(cache, query, variables, normalizeEntities))
+
+      expect(newQuery).to.equal(print(gql`
+        fragment Foo on User {
+          someOtherConnection {
+            id
+          }
+          ...Baz
+        }
+
+        query {
+          user {
+            id
+            about
+            otherFriendsDynamic: friends(limit: $someLimit) { id, name }
+            relatedFriends { ...Another }
+            ...Foo
+            dateOfBirth
+          }
+        }
+
+        fragment Baz on User {
+          reallyAnotherConnection {
+            id
+            name
+          }
+        }
+
+        fragment Another on User {
+          about
         }
       `))
     })
@@ -495,6 +713,11 @@ describe('middleware/normalize-entities', function () {
               id
               about
             }
+
+            otherUsers {
+              id
+              name
+            }
           }
 
           someOtherUser {
@@ -515,6 +738,10 @@ describe('middleware/normalize-entities', function () {
             { user: { id: '11' } },
             { user: { id: '12' } },
           ],
+          otherUsers: [
+            { id: '13' },
+            { id: '14' },
+          ],
           nestedUser: {
             id: '10',
           },
@@ -526,6 +753,14 @@ describe('middleware/normalize-entities', function () {
         [cacheKey('node', { id: '12' })]: {
           id: '12',
           name: 'Person 2',
+        },
+        [cacheKey('node', { id: '13' })]: {
+          id: '13',
+          name: 'Person 3',
+        },
+        [cacheKey('node', { id: '14' })]: {
+          id: '14',
+          name: 'Person 4',
         },
         user: {
           id: '10',
@@ -554,6 +789,16 @@ describe('middleware/normalize-entities', function () {
                 id: '12',
                 name: 'Person 2',
               },
+            },
+          ],
+          otherUsers: [
+            {
+              id: '13',
+              name: 'Person 3',
+            },
+            {
+              id: '14',
+              name: 'Person 4',
             },
           ],
           nestedUser: {

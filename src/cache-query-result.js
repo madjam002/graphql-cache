@@ -42,7 +42,7 @@ function visitTree(ast, cacheStack, resultStack, middleware = []) {
             pushToStack(cacheStack, cacheStackTop[cacheKey])
             pushToStack(resultStack, resultStackTop[resultKey])
 
-            visitArray(selectionSet, cacheStack, resultStack, middleware)
+            visitArray(node, cacheStack, resultStack, middleware)
 
             popTopFromStack(cacheStack)
             popTopFromStack(resultStack)
@@ -102,15 +102,22 @@ function getResultKey(node) {
     : node.name.value
 }
 
-function visitArray(ast, cacheStack, resultStack, middleware) {
+function visitArray(node, cacheStack, resultStack, middleware) {
+  const ast = node.selectionSet
   const cacheStackTop = getTopOfStack(cacheStack)
   const resultStackTop = getTopOfStack(resultStack)
 
   resultStackTop.forEach((element, index) => {
     cacheStackTop[index] = {}
 
+    const newResultStack = getNewStackFrom(element)
+
     pushToStack(cacheStack, cacheStackTop[index])
-    visitTree(ast, cacheStack, getNewStackFrom(element), middleware)
+    callMiddleware(middleware, 'cacheQueryResult', 'enterSelectionSet', node, cacheStack, newResultStack)
+
+    visitTree(ast, cacheStack, newResultStack, middleware)
+
+    callMiddleware(middleware, 'cacheQueryResult', 'leaveSelectionSet', node, cacheStack, newResultStack)
     popTopFromStack(cacheStack)
   })
 }

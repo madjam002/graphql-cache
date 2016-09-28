@@ -2,7 +2,8 @@
 
 import {expect} from 'chai'
 import gql from 'graphql-tag'
-import {cacheQueryResult} from '../../../cache-query-result'
+import {print} from 'graphql-tag/printer'
+import {cacheQueryResult, passThroughQuery} from '../../../'
 import {cacheKey} from '../../../util'
 import {normalizeEntities} from '../index'
 
@@ -134,6 +135,155 @@ describe('middleware/normalize-entities', function () {
           id: '10',
         },
       })
+    })
+  })
+
+  describe('passThroughQuery', function () {
+    it('should take a simple cache state with normalized entities and query and remove unnecessary fields', function () {
+      const query = gql`
+        query {
+          user {
+            id
+            name
+            dateOfBirth
+            interests
+            about
+          }
+        }
+      `
+
+      const cache = {
+        [cacheKey('node', { id: '10' })]: {
+          id: '10',
+          name: 'John Smith',
+          interests: 'Hi',
+        },
+        user: {
+          id: '10',
+        },
+      }
+
+      const newQuery = print(passThroughQuery(cache, query, null, normalizeEntities))
+
+      expect(newQuery).to.equal(print(gql`
+        query {
+          user {
+            id
+            dateOfBirth
+            about
+          }
+        }
+      `))
+    })
+
+    it('should take a simple cache state and query and return null if all data requested is in cache', function () {
+      const query = gql`
+        query {
+          user {
+            id
+            name
+            dateOfBirth
+          }
+        }
+      `
+
+      const cache = {
+        [cacheKey('node', { id: '10' })]: {
+          id: '10',
+          name: 'John Smith',
+          dateOfBirth: '2016-09-20 10:00',
+        },
+        user: {
+          id: '10',
+        },
+      }
+
+      const newQuery = passThroughQuery(cache, query, null, normalizeEntities)
+
+      expect(newQuery).to.be.null
+    })
+
+    it('should take a complex cache state with normalized entities and query and remove unnecessary fields', function () {
+      const query = gql`
+        query {
+          user {
+            id
+            name
+            dateOfBirth
+
+            friends(first: 3) {
+              user {
+                id
+                name
+              }
+            }
+
+            nestedUser {
+              id
+              about
+              foo
+            }
+          }
+
+          someOtherUser {
+            id
+            interests
+          }
+        }
+      `
+
+      const cache = {
+        [cacheKey('node', { id: '10' })]: {
+          id: '10',
+          name: 'John Smith',
+          dateOfBirth: '2016-09-20 10:00',
+          interests: 'What?!',
+          foo: 'bar',
+          [cacheKey('friends', { first: 3 })]: [
+            { user: { id: '11' } },
+            { user: { id: '12' } },
+          ],
+          nestedUser: {
+            id: '10',
+          },
+        },
+        [cacheKey('node', { id: '11' })]: {
+          id: '11',
+          name: 'Person 1',
+        },
+        [cacheKey('node', { id: '12' })]: {
+          id: '12',
+          // name is missing!!
+        },
+        user: {
+          id: '10',
+        },
+        someOtherUser: {
+          id: '10',
+        },
+      }
+
+      const newQuery = print(passThroughQuery(cache, query, null, normalizeEntities))
+
+      expect(newQuery).to.equal(print(gql`
+        query {
+          user {
+            id
+
+            friends(first: 3) {
+              user {
+                id
+                name
+              }
+            }
+
+            nestedUser {
+              id
+              about
+            }
+          }
+        }
+      `))
     })
   })
 

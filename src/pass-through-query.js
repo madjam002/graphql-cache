@@ -1,10 +1,10 @@
 import {visit} from 'graphql/language/visitor'
-import {getTopOfStack, pushToStack, popTopFromStack} from './util'
+import {getTopOfStack, pushToStack, popTopFromStack, callMiddleware} from './util'
 
 const VISIT_REMOVE_NODE = null
 
-export function passThroughQuery(cache, query, variables) {
-  const astPendingDeletion = visitTree(query, query, [cache], variables)
+export function passThroughQuery(cache, query, variables = null, ...middleware) {
+  const astPendingDeletion = visitTree(query, query, [cache], variables, middleware)
   const newAst = visitTreeDeleteUnusedFragments(visitTreeDeleteNodes(astPendingDeletion))
 
   if (!newAst || (newAst.definitions.length === 0)) {
@@ -14,7 +14,7 @@ export function passThroughQuery(cache, query, variables) {
   return newAst
 }
 
-function visitTree(rootAst, ast, cacheStack, variables, insideQuery = false) {
+function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQuery = false) {
   let skipAfter = null
 
   return visit(ast, {
@@ -37,7 +37,7 @@ function visitTree(rootAst, ast, cacheStack, variables, insideQuery = false) {
 
         const newFragment = {
           ...fragment,
-          selectionSet: visitTree(rootAst, fragment.selectionSet, cacheStack, variables, true),
+          selectionSet: visitTree(rootAst, fragment.selectionSet, cacheStack, variables, middleware, true),
         }
 
         replaceFragment(rootAst, nameOfFragment, newFragment)
@@ -63,7 +63,7 @@ function visitTree(rootAst, ast, cacheStack, variables, insideQuery = false) {
           } else if (Array.isArray(cachedValue)) {
             pushToStack(cacheStack, cachedValue)
 
-            const res = visitArray(rootAst, node.selectionSet, cacheStack, variables)
+            const res = visitArray(rootAst, node.selectionSet, cacheStack, variables, middleware)
 
             const newNode = {
               ...node,
@@ -75,6 +75,8 @@ function visitTree(rootAst, ast, cacheStack, variables, insideQuery = false) {
             return newNode
           } else {
             pushToStack(cacheStack, cachedValue)
+
+            callMiddleware(middleware, 'passThroughQuery', 'enterSelectionSet', node, cacheStack)
           }
         } else {
           if (cachedValue !== undefined) {
@@ -102,7 +104,13 @@ function visitTree(rootAst, ast, cacheStack, variables, insideQuery = false) {
         const selectionSet = node.selectionSet
 
         if (selectionSet) {
+          const res = callMiddleware(middleware, 'passThroughQuery', 'leaveSelectionSet', node, cacheStack)
+
           popTopFromStack(cacheStack)
+
+          if (res !== undefined) {
+            return res
+          }
         }
       }
     },
@@ -230,14 +238,14 @@ function getCacheKey(node, variables) {
   return baseName + '|' + JSON.stringify(args)
 }
 
-function visitArray(rootAst, ast, cacheStack, variables) {
+function visitArray(rootAst, ast, cacheStack, variables, middleware) {
   const cacheStackTop = getTopOfStack(cacheStack)
 
   let lastAst = ast
 
   cacheStackTop.forEach(element => {
     pushToStack(cacheStack, element)
-    lastAst = visitTree(rootAst, lastAst, cacheStack, variables, true)
+    lastAst = visitTree(rootAst, lastAst, cacheStack, variables, middleware, true)
     popTopFromStack(cacheStack)
   })
 

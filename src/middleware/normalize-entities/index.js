@@ -1,4 +1,4 @@
-import {cacheKey} from '../../util'
+import {cacheKey, ensureSelectionSetHasField, fieldsInSelectionSet} from '../../util'
 
 export const normalizeEntities = {
   cacheQueryResult: {
@@ -21,8 +21,6 @@ export const normalizeEntities = {
         const nodeInCache = cache[nodeCacheKey]
 
         cacheStack.push(nodeInCache)
-
-        return true
       }
     },
 
@@ -31,7 +29,41 @@ export const normalizeEntities = {
 
       if (result.id) {
         cacheStack.pop()
-        return true
+      }
+    },
+  },
+
+  passThroughQuery: {
+    enterSelectionSet(node, cacheStack) {
+      const result = getTopOfStack(cacheStack)
+
+      if (result.id) {
+        // got entity
+        const cache = cacheStack[0]
+        const nodeCacheKey = cacheKey('node', { id: result.id })
+
+        if (!cache[nodeCacheKey]) {
+          cache[nodeCacheKey] = {}
+        }
+
+        const nodeInCache = cache[nodeCacheKey]
+
+        cacheStack.push(nodeInCache)
+      }
+    },
+    leaveSelectionSet(node, cacheStack) {
+      const result = getTopOfStack(cacheStack)
+
+      if (result.id) {
+        cacheStack.pop()
+
+        const fields = fieldsInSelectionSet(node)
+
+        // if there fields which need to be queried, make sure we are querying for the id
+        // so it can be put into the cache later on
+        if (fields.length > 0) {
+          return ensureSelectionSetHasField(node, 'id')
+        }
       }
     },
   },

@@ -28,7 +28,8 @@
   },
   "homepage": "https://github.com/madjam002/graphql-cache#readme",
   "dependencies": {
-    "graphql": "^0.7.0"
+    "graphql": "^0.7.0",
+    "invariant": "^2.2.1"
   },
   "devDependencies": {
     "babel-cli": "^6.7.5",

@@ -1,5 +1,6 @@
 /* eslint-env mocha */
 
+import _ from 'lodash'
 import {expect} from 'chai'
 import gql from 'graphql-tag'
 import {print} from 'graphql-tag/printer'
@@ -549,7 +550,11 @@ describe('middleware/normalize-entities', function () {
         },
       }
 
+      const oldQuery = _.cloneDeep(query)
+
       const newQuery = print(passThroughQuery(cache, query, null, normalizeEntities))
+
+      expect(query).to.eql(oldQuery) // ensure query wasn't mutated
 
       expect(newQuery).to.equal(print(gql`
         query {

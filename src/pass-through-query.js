@@ -110,12 +110,7 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
           } else if (Array.isArray(cachedValue)) {
             pushToStack(cacheStack, cachedValue)
 
-            const res = visitArray(rootAst, node, cacheStack, variables, middleware)
-
-            const newNode = {
-              ...node,
-              selectionSet: res,
-            }
+            const newNode = visitArray(rootAst, node, cacheStack, variables, middleware)
 
             skipAfter = newNode
 
@@ -277,18 +272,24 @@ function getCacheKey(node, variables) {
 
 function visitArray(rootAst, node, cacheStack, variables, middleware) {
   const cacheStackTop = getTopOfStack(cacheStack)
-  const ast = node.selectionSet
 
-  let lastAst = ast
+  let lastAst = node
 
   cacheStackTop.forEach(element => {
     pushToStack(cacheStack, element)
-    callMiddleware(middleware, 'passThroughQuery', 'enterSelectionSet', node, cacheStack)
+    callMiddleware(middleware, 'passThroughQuery', 'enterSelectionSet', lastAst, cacheStack)
 
-    lastAst = visitTree(rootAst, lastAst, cacheStack, variables, middleware, true)
+    lastAst = {
+      ...lastAst,
+      selectionSet: visitTree(rootAst, lastAst.selectionSet, cacheStack, variables, middleware, true),
+    }
 
-    callMiddleware(middleware, 'passThroughQuery', 'leaveSelectionSet', node, cacheStack)
+    const middlewareResult = callMiddleware(middleware, 'passThroughQuery', 'leaveSelectionSet', lastAst, cacheStack)
     popTopFromStack(cacheStack)
+
+    if (middlewareResult != null) {
+      lastAst = middlewareResult
+    }
   })
 
   return lastAst

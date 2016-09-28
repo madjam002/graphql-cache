@@ -63,7 +63,10 @@ export const normalizeEntities = {
       if (isEntity(result)) {
         popTopFromStack(cacheStack)
 
-        node.__shouldHaveId = true
+        return {
+          ...node,
+          __shouldHaveId: true,
+        }
       }
     },
     after(cache, ast) {

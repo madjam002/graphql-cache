@@ -1,4 +1,24 @@
-import {cacheKey, ensureSelectionSetHasField, fieldsInSelectionSet} from '../../util'
+import {
+  cacheKey,
+  getTopOfStack,
+  popTopFromStack,
+  pushToStack,
+  ensureSelectionSetHasField,
+  fieldsInSelectionSet,
+} from '../../util'
+
+function pushNodeToTopOfStack(cacheStack, node) {
+  const rootCache = cacheStack[0]
+  const nodeCacheKey = cacheKey('node', { id: node.id })
+
+  if (!rootCache[nodeCacheKey]) {
+    rootCache[nodeCacheKey] = {}
+  }
+
+  const nodeInCache = rootCache[nodeCacheKey]
+
+  pushToStack(cacheStack, nodeInCache)
+}
 
 export const normalizeEntities = {
   cacheQueryResult: {
@@ -11,16 +31,7 @@ export const normalizeEntities = {
         // set id on original tree in cache so it points to node
         getTopOfStack(cacheStack).id = result.id
 
-        const cache = cacheStack[0]
-        const nodeCacheKey = cacheKey('node', { id: result.id })
-
-        if (!cache[nodeCacheKey]) {
-          cache[nodeCacheKey] = {}
-        }
-
-        const nodeInCache = cache[nodeCacheKey]
-
-        cacheStack.push(nodeInCache)
+        pushNodeToTopOfStack(cacheStack, result)
       }
     },
 
@@ -28,7 +39,7 @@ export const normalizeEntities = {
       const result = getTopOfStack(resultStack)
 
       if (result.id) {
-        cacheStack.pop()
+        popTopFromStack(cacheStack)
       }
     },
   },
@@ -39,23 +50,14 @@ export const normalizeEntities = {
 
       if (result.id) {
         // got entity
-        const cache = cacheStack[0]
-        const nodeCacheKey = cacheKey('node', { id: result.id })
-
-        if (!cache[nodeCacheKey]) {
-          cache[nodeCacheKey] = {}
-        }
-
-        const nodeInCache = cache[nodeCacheKey]
-
-        cacheStack.push(nodeInCache)
+        pushNodeToTopOfStack(cacheStack, result)
       }
     },
     leaveSelectionSet(node, cacheStack) {
       const result = getTopOfStack(cacheStack)
 
       if (result.id) {
-        cacheStack.pop()
+        popTopFromStack(cacheStack)
 
         const fields = fieldsInSelectionSet(node)
 
@@ -67,8 +69,23 @@ export const normalizeEntities = {
       }
     },
   },
-}
 
-function getTopOfStack(stack) {
-  return stack[stack.length - 1]
+  queryCache: {
+    enterSelectionSet(node, cacheStack) {
+      const result = getTopOfStack(cacheStack)
+
+      if (result.id) {
+        // got entity
+        pushNodeToTopOfStack(cacheStack, result)
+      }
+    },
+
+    leaveSelectionSet(node, cacheStack) {
+      const result = getTopOfStack(cacheStack)
+
+      if (result.id) {
+        popTopFromStack(cacheStack)
+      }
+    },
+  },
 }

@@ -1,18 +1,18 @@
 import {visit} from 'graphql/language/visitor'
-import {simplifyAst, getNewStackFrom, getTopOfStack, pushToStack, popTopFromStack} from './util'
+import {simplifyAst, getNewStackFrom, getTopOfStack, pushToStack, popTopFromStack, callMiddleware} from './util'
 
 const VISIT_SKIP_THIS_NODE = false
 
-export function queryCache(cache, query, queryVariables = null) {
+export function queryCache(cache, query, queryVariables = null, ...middleware) {
   const simplifiedAst = simplifyAst(query, queryVariables)
   const result = {}
 
-  visitTree(simplifiedAst, getNewStackFrom(cache), getNewStackFrom(result))
+  visitTree(simplifiedAst, getNewStackFrom(cache), getNewStackFrom(result), middleware)
 
   return result
 }
 
-function visitTree(ast, cacheStack, resultStack) {
+function visitTree(ast, cacheStack, resultStack, middleware) {
   visit(ast, {
 
     enter(node, key, parent, path, ancestors) {
@@ -36,7 +36,7 @@ function visitTree(ast, cacheStack, resultStack) {
             pushToStack(cacheStack, cacheStackTop[cacheKey])
             pushToStack(resultStack, resultStackTop[resultKey])
 
-            visitArray(selectionSet, cacheStack, resultStack)
+            visitArray(selectionSet, cacheStack, resultStack, middleware)
 
             popTopFromStack(cacheStack)
             popTopFromStack(resultStack)
@@ -49,6 +49,8 @@ function visitTree(ast, cacheStack, resultStack) {
 
             pushToStack(cacheStack, cacheStackTop[cacheKey])
             pushToStack(resultStack, resultStackTop[resultKey])
+
+            callMiddleware(middleware, 'queryCache', 'enterSelectionSet', node, cacheStack, resultStack)
           }
         } else {
           resultStackTop[resultKey] = cacheStackTop[cacheKey]
@@ -61,6 +63,8 @@ function visitTree(ast, cacheStack, resultStack) {
         const selectionSet = node.selectionSet
 
         if (selectionSet) {
+          callMiddleware(middleware, 'queryCache', 'leaveSelectionSet', node, cacheStack, resultStack)
+
           popTopFromStack(cacheStack)
           popTopFromStack(resultStack)
         }
@@ -92,19 +96,19 @@ function getResultKey(node) {
     : node.name.value
 }
 
-function visitArray(ast, cacheStack, resultStack) {
+function visitArray(ast, cacheStack, resultStack, middleware) {
   const cacheStackTop = getTopOfStack(cacheStack)
   const resultStackTop = getTopOfStack(resultStack)
 
   cacheStackTop.forEach((element, index) => {
     resultStackTop[index] = {}
 
-    pushToStack(cacheStackTop, cacheStackTop[index])
-    pushToStack(resultStackTop, resultStackTop[index])
+    pushToStack(cacheStack, cacheStackTop[index])
+    pushToStack(resultStack, resultStackTop[index])
 
-    visitTree(ast, cacheStackTop, resultStackTop)
+    visitTree(ast, cacheStack, resultStack, middleware)
 
-    popTopFromStack(cacheStackTop)
-    popTopFromStack(resultStackTop)
+    popTopFromStack(cacheStack)
+    popTopFromStack(resultStack)
   })
 }

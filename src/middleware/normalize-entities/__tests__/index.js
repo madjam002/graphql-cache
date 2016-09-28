@@ -3,7 +3,7 @@
 import {expect} from 'chai'
 import gql from 'graphql-tag'
 import {print} from 'graphql-tag/printer'
-import {cacheQueryResult, passThroughQuery} from '../../../'
+import {cacheQueryResult, passThroughQuery, queryCache} from '../../../'
 import {cacheKey} from '../../../util'
 import {normalizeEntities} from '../index'
 
@@ -284,6 +284,132 @@ describe('middleware/normalize-entities', function () {
           }
         }
       `))
+    })
+  })
+
+  describe('queryCache', function () {
+    it('should take a simple cache state and query and return the correct data', function () {
+      const query = gql`
+        query {
+          user {
+            id
+            name
+            dateOfBirth
+          }
+        }
+      `
+
+      const cache = {
+        [cacheKey('node', { id: '10' })]: {
+          id: '10',
+          name: 'John Smith',
+          dateOfBirth: '2016-09-20 10:00',
+        },
+        user: {
+          id: '10',
+        },
+      }
+      const results = queryCache(cache, query, null, normalizeEntities)
+
+      expect(results).to.eql({
+        user: {
+          id: '10',
+          name: 'John Smith',
+          dateOfBirth: '2016-09-20 10:00',
+        },
+      })
+    })
+
+    it('should take a complex cache state and query and return the correct data', function () {
+      const query = gql`
+        query {
+          user {
+            id
+            name
+            dateOfBirth
+
+            friends(first: 3) {
+              user {
+                id
+                name
+              }
+            }
+
+            nestedUser {
+              id
+              about
+            }
+          }
+
+          someOtherUser {
+            id
+            interests
+          }
+        }
+      `
+
+      const cache = {
+        [cacheKey('node', { id: '10' })]: {
+          id: '10',
+          name: 'John Smith',
+          dateOfBirth: '2016-09-20 10:00',
+          interests: 'What?!',
+          about: 'Same user inside itself.',
+          [cacheKey('friends', { first: 3 })]: [
+            { user: { id: '11' } },
+            { user: { id: '12' } },
+          ],
+          nestedUser: {
+            id: '10',
+          },
+        },
+        [cacheKey('node', { id: '11' })]: {
+          id: '11',
+          name: 'Person 1',
+        },
+        [cacheKey('node', { id: '12' })]: {
+          id: '12',
+          name: 'Person 2',
+        },
+        user: {
+          id: '10',
+        },
+        someOtherUser: {
+          id: '10',
+        },
+      }
+
+      const results = queryCache(cache, query, null, normalizeEntities)
+
+      expect(results).to.eql({
+        user: {
+          id: '10',
+          name: 'John Smith',
+          dateOfBirth: '2016-09-20 10:00',
+          friends: [
+            {
+              user: {
+                id: '11',
+                name: 'Person 1',
+              },
+            },
+            {
+              user: {
+                id: '12',
+                name: 'Person 2',
+              },
+            },
+          ],
+          nestedUser: {
+            id: '10',
+            about: 'Same user inside itself.',
+          },
+        },
+        someOtherUser: {
+          id: '10',
+          interests: 'What?!',
+        },
+      })
     })
   })
 

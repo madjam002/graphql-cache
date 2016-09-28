@@ -91,6 +91,79 @@ describe('passThroughQuery', function () {
     expect(newQuery).to.be.null
   })
 
+  it('should take a simple cache state and query and remove unnecessary fields with fragments on an interface', function () {
+    const query = gql`
+      query {
+        feed {
+          items {
+            id
+            __typename
+            ...PlantItem
+            ...InsectItem
+            ...on Grass {
+              type
+            }
+          }
+        }
+      }
+
+      fragment PlantItem on Plant {
+        name
+        colour
+      }
+
+      fragment InsectItem on Insect {
+        name
+        speed
+      }
+    `
+
+    const cache = {
+      feed: {
+        items: [
+          {
+            id: '1',
+            __typename: 'Plant',
+            name: 'Conifer',
+            colour: 'green',
+          },
+          {
+            id: '2',
+            __typename: 'Grass',
+            type: 'unknown',
+          },
+          {
+            id: '3',
+            __typename: 'Insect',
+            name: 'Bee',
+            speed: 13,
+          },
+          {
+            id: '4',
+            __typename: 'Insect',
+            name: 'Wasp',
+          },
+        ],
+      },
+    }
+
+    const newQuery = print(passThroughQuery(cache, query))
+
+    expect(newQuery).to.equal(print(gql`
+      query {
+        feed {
+          items {
+            ...InsectItem
+          }
+        }
+      }
+
+      fragment InsectItem on Insect {
+        speed
+      }
+    `))
+  })
+
   it('should take a complex query and result and return it in a cached format', function () {
     const query = gql`
       fragment Bar on User {

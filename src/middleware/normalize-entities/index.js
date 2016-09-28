@@ -1,10 +1,10 @@
+import {visit} from 'graphql/language/visitor'
 import {
   cacheKey,
   getTopOfStack,
   popTopFromStack,
   pushToStack,
   ensureSelectionSetHasField,
-  fieldsInSelectionSet,
 } from '../../util'
 
 function isEntity(maybeEntity) {
@@ -63,14 +63,17 @@ export const normalizeEntities = {
       if (isEntity(result)) {
         popTopFromStack(cacheStack)
 
-        const fields = fieldsInSelectionSet(node)
-
-        // if there fields which need to be queried, make sure we are querying for the id
-        // so it can be put into the cache later on
-        if (fields.length > 0) {
-          return ensureSelectionSetHasField(node, 'id')
-        }
+        node.__shouldHaveId = true
       }
+    },
+    after(cache, ast) {
+      return visit(ast, {
+        enter(node) {
+          if (node.__shouldHaveId) {
+            return ensureSelectionSetHasField(node, 'id')
+          }
+        },
+      })
     },
   },
 

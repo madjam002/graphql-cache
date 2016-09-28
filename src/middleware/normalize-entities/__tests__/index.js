@@ -210,12 +210,12 @@ describe('middleware/normalize-entities', function () {
       expect(newQuery).to.equal(print(gql`
         query {
           user {
-            id
             dateOfBirth
             about
             location {
               address { street { name } }
             }
+            id
           }
           otherUser {
             id
@@ -320,9 +320,9 @@ describe('middleware/normalize-entities', function () {
       expect(newQuery).to.equal(print(gql`
         query {
           user(id: $userId) {
-            id
             dateOfBirth
             about
+            id
           }
           otherUser {
             id
@@ -374,10 +374,10 @@ describe('middleware/normalize-entities', function () {
       expect(newQuery).to.equal(print(gql`
         query {
           user {
-            id
             dateOfBirth
             ...User
             about
+            id
           }
           otherUser {
             id
@@ -390,6 +390,84 @@ describe('middleware/normalize-entities', function () {
             primary { name }
             secondary { name }
           }
+        }
+      `))
+    })
+
+    it('should take a simple cache state and query and remove unnecessary fields with fragments on an interface', function () {
+      const query = gql`
+        query {
+          feed {
+            items {
+              id
+              __typename
+              ...PlantItem
+              ...InsectItem
+              ...on Grass {
+                type
+              }
+            }
+          }
+        }
+
+        fragment PlantItem on Plant {
+          name
+          colour
+        }
+
+        fragment InsectItem on Insect {
+          name
+          speed
+        }
+      `
+
+      const cache = {
+        [cacheKey('node', { id: '1' })]: {
+          id: '1',
+          __typename: 'Plant',
+          name: 'Conifer',
+          colour: 'green',
+        },
+        [cacheKey('node', { id: '2' })]: {
+          id: '2',
+          __typename: 'Grass',
+          type: 'unknown',
+        },
+        [cacheKey('node', { id: '3' })]: {
+          id: '3',
+          __typename: 'Insect',
+          name: 'Bee',
+          speed: 13,
+        },
+        [cacheKey('node', { id: '4' })]: {
+          id: '4',
+          __typename: 'Insect',
+          name: 'Wasp',
+        },
+        feed: {
+          items: [
+            { id: '1' },
+            { id: '2' },
+            { id: '3' },
+            { id: '4' },
+          ],
+        },
+      }
+
+      const newQuery = print(passThroughQuery(cache, query, null, normalizeEntities))
+
+      expect(newQuery).to.equal(print(gql`
+        query {
+          feed {
+            items {
+              ...InsectItem
+              id
+            }
+          }
+        }
+
+        fragment InsectItem on Insect {
+          speed
         }
       `))
     })
@@ -476,19 +554,19 @@ describe('middleware/normalize-entities', function () {
       expect(newQuery).to.equal(print(gql`
         query {
           user {
-            id
-
             friends(first: 3) {
               user {
-                id
                 name
+                id
               }
             }
 
             nestedUser {
-              id
               about
+              id
             }
+
+            id
           }
         }
       `))
@@ -646,12 +724,12 @@ describe('middleware/normalize-entities', function () {
 
         query {
           user {
-            id
             about
             otherFriendsDynamic: friends(limit: $someLimit) { id, name }
-            relatedFriends { ...Another }
+            relatedFriends { ...Another, id }
             ...Foo
             dateOfBirth
+            id
           }
         }
 

@@ -5,7 +5,22 @@ const VISIT_REMOVE_NODE = null
 
 export function passThroughQuery(cache, query, variables = null, ...middleware) {
   const astPendingDeletion = visitTree(query, query, [cache], variables, middleware)
-  const newAst = visitTreeDeleteUnusedFragments(visitTreeDeleteNodes(astPendingDeletion))
+  let newAst = visitTreeDeleteUnusedFragments(visitTreeDeleteNodes(astPendingDeletion))
+
+  // allow for middleware to have "after" hooks to change AST
+  if (middleware) {
+    for (const middlewareDef of middleware) {
+      if (middlewareDef.passThroughQuery && middlewareDef.passThroughQuery.after) {
+        const res = middlewareDef.passThroughQuery.after(cache, newAst, variables)
+
+        if (!res) {
+          return res
+        }
+
+        newAst = res
+      }
+    }
+  }
 
   if (!newAst || (newAst.definitions.length === 0)) {
     return null
@@ -31,9 +46,32 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
         return
       }
 
+      if (node.kind === 'InlineFragment') {
+        const onType = node.typeCondition.name && node.typeCondition.name.value
+        const cacheStackTop = getTopOfStack(cacheStack)
+
+        // try and select fragment based on type (if __typename is present)
+        if (onType && cacheStackTop && cacheStackTop.__typename) {
+          if (onType !== cacheStackTop.__typename) {
+            // if types don't match, skip
+            return false
+          }
+        }
+      }
+
       if (node.kind === 'FragmentSpread') {
         const nameOfFragment = node.name.value
         const fragment = getFragment(rootAst, nameOfFragment)
+        const onType = fragment.typeCondition.name && fragment.typeCondition.name.value
+        const cacheStackTop = getTopOfStack(cacheStack)
+
+        // try and select fragment based on type (if __typename is present)
+        if (onType && cacheStackTop && cacheStackTop.__typename) {
+          if (onType !== cacheStackTop.__typename) {
+            // if types don't match, skip
+            return false
+          }
+        }
 
         const newFragment = {
           ...fragment,

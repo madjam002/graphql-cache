@@ -79,19 +79,6 @@ export function ensureSelectionSetHasField(node, field) {
   }
 }
 
-/**
- * Returns an array of field names which are being queried in a selection set
- */
-export function fieldsInSelectionSet(node) {
-  invariant(node, 'queryForField(): node not provided')
-  invariant(node.selectionSet, 'queryForField(): node does not have selectionSet')
-
-  return node.selectionSet.selections
-  .filter(node => node.kind === 'Field' && !node.__shouldDelete && node.name)
-  .filter(node => !node.selectionSet || fieldsInSelectionSet(node).length > 0)
-  .map(node => node.name.value)
-}
-
 function getFragment(ast, name) {
   invariant(ast.kind === 'Document', 'getFragment(): ast.kind is not Document')
 

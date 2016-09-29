@@ -109,7 +109,20 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
         const cachedValue = cacheStackTop[cacheKey]
 
         if (selectionSet) {
+          if (cachedValue === null) {
+            const nullMiddlewareResult = callMiddleware(middleware, 'passThroughQuery', 'enterNull', node, cacheStack, cacheKey)
+
+            if (nullMiddlewareResult !== undefined) {
+              if (selectionSet) {
+                pushToStack(cacheStack, cachedValue)
+              }
+
+              return nullMiddlewareResult
+            }
+          }
+
           if (cachedValue === null || (Array.isArray(cachedValue) && cachedValue.length === 0)) {
+            pushToStack(cacheStack, cachedValue)
             return markAsShouldDelete(node)
           } else if (cachedValue === undefined) {
             return false
@@ -124,7 +137,11 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
           } else {
             pushToStack(cacheStack, cachedValue)
 
-            callMiddleware(middleware, 'passThroughQuery', 'enterSelectionSet', node, cacheStack)
+            const middlewareResult = callMiddleware(middleware, 'passThroughQuery', 'enterSelectionSet', node, cacheStack, cacheKey)
+
+            if (middlewareResult != null) {
+              return middlewareResult
+            }
           }
         } else {
           const middlewareResult = callMiddleware(middleware, 'passThroughQuery', 'enterField', node, cacheStack, cacheKey)
@@ -154,7 +171,7 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
         return
       }
 
-      if (node.kind === 'Field' && !isMarkedForDeletion(node)) {
+      if (node.kind === 'Field') {
         const selectionSet = node.selectionSet
 
         if (selectionSet) {

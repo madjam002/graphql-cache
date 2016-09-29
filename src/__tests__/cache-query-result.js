@@ -216,6 +216,54 @@ describe('cacheQueryResult', function () {
   })
 
   describe('with existing data in cache', function () {
+    it('should keep null values in the cache', function () {
+      const query = gql`
+        query {
+          user {
+            id
+            ...User
+            name
+          }
+        }
+
+        fragment User on User {
+          dateOfBirth
+          someNullValue
+        }
+      `
+
+      const result = {
+        user: {
+          id: '10',
+          name: 'John Smith',
+          dateOfBirth: '2016-09-20 10:00',
+        },
+      }
+
+      const previousCache = {
+        user: {
+          id: '10',
+          name: 'John Smith',
+          someNullValue: null,
+          oldData: 'hi',
+          photo: null,
+        },
+      }
+
+      const cache = cacheQueryResult(previousCache, query, result)
+
+      expect(cache).to.eql({
+        user: {
+          id: '10',
+          name: 'John Smith',
+          dateOfBirth: '2016-09-20 10:00',
+          someNullValue: undefined,
+          oldData: 'hi',
+          photo: null,
+        },
+      })
+    })
+
     it('should take a complex query and result and return it in a cached format whilst respecting old cache data', function () {
       const query = gql`
         query {

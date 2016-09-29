@@ -195,6 +195,71 @@ describe('middleware/session-validation', function () {
         otherUser: null,
       })
     })
+
+    it('should keep null values in the cache', function () {
+      const query = gql`
+        query {
+          user {
+            id
+            ...User
+            name
+          }
+        }
+
+        fragment User on User {
+          dateOfBirth
+          someNullValue
+        }
+      `
+
+      const result = {
+        user: {
+          id: '10',
+          name: 'John Smith',
+          dateOfBirth: '2016-09-20 10:00',
+        },
+      }
+
+      const previousCache = {
+        user: {
+          $$sessionMeta: {
+            id: 'lastsession',
+            name: 'lastsession',
+            someNullValue: 'lastsession',
+            oldData: 'lastsession',
+            photo: 'lastsession',
+          },
+          id: '10',
+          name: 'John Smith',
+          someNullValue: null,
+          oldData: 'hi',
+          photo: null,
+        },
+      }
+
+      const cache = cacheQueryResult(previousCache, query, result, null, sessionValidation({
+        sessionId: 'nextsession',
+      }))
+
+      expect(cache).to.eql({
+        user: {
+          $$sessionMeta: {
+            id: 'nextsession',
+            name: 'nextsession',
+            someNullValue: 'lastsession',
+            oldData: 'lastsession',
+            photo: 'lastsession',
+            dateOfBirth: 'nextsession',
+          },
+          id: '10',
+          name: 'John Smith',
+          dateOfBirth: '2016-09-20 10:00',
+          someNullValue: undefined,
+          oldData: 'hi',
+          photo: null,
+        },
+      })
+    })
   })
 
   describe('passThroughQuery', function () {
@@ -207,6 +272,8 @@ describe('middleware/session-validation', function () {
             dateOfBirth
             about
             ...Foo
+            picture { url }
+            url
             bestFriend {
               name
               about
@@ -233,11 +300,15 @@ describe('middleware/session-validation', function () {
             interests: 'mysession',
             about: 'lastsession',
             bestFriend: 'mysession',
+            picture: 'lastsession',
+            url: 'mysession',
           },
           id: '10',
           name: 'John Smith',
           about: 'I am awesome',
           interests: 'GraphQL',
+          picture: null,
+          url: 'http://',
           bestFriend: {
             $$sessionMeta: {
               name: 'mysession',
@@ -286,6 +357,7 @@ describe('middleware/session-validation', function () {
           user {
             dateOfBirth
             about
+            picture { url }
             bestFriend {
               interests
               picture {

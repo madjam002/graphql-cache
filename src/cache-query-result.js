@@ -25,9 +25,11 @@ function visitTree(ast, cacheStack, resultStack, middleware = []) {
         const selectionSet = node.selectionSet
 
         if (selectionSet) {
-          if (resultStackTop[resultKey] == null) {
+          if (resultStackTop[resultKey] === null) {
             cacheStackTop[cacheKey] = resultStackTop[resultKey]
 
+            return VISIT_SKIP_THIS_NODE
+          } else if (resultStackTop[resultKey] == null) {
             return VISIT_SKIP_THIS_NODE
           }
 

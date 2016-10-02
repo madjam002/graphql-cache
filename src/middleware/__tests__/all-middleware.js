@@ -40,6 +40,7 @@ describe('all middleware combined', function () {
 
         fragment User on User {
           name
+          picture { url }
         }
 
         fragment Place on Place {
@@ -61,7 +62,7 @@ describe('all middleware combined', function () {
           ],
         },
         feed: [
-          { id: '15', name: 'Person 5' },
+          { id: '15', name: 'Person 5', picture: { url: 'http://' } },
           { id: '16', name: 'Some place!', about: 'This place is awesome' },
         ],
         otherUser: null,
@@ -114,20 +115,34 @@ describe('all middleware combined', function () {
             id: 'testid',
             name: 'testid',
             about: 'testid',
+            picture: 'testid',
           },
           id: '15',
           name: 'Person 5',
           about: 'I\'m awesome',
+          picture: {
+            $$sessionMeta: {
+              url: 'testid',
+            },
+            url: 'http://',
+          },
         },
         [cacheKey('node', { id: '16' })]: {
           $$sessionMeta: {
             id: 'testid',
             name: 'testid',
             about: 'testid',
+            picture: 'testid',
           },
           id: '16',
           name: 'Some place!',
           about: 'This place is awesome',
+          picture: {
+            $$sessionMeta: {
+              url: 'testid',
+            },
+            url: 'http://',
+          },
         },
         user: {
           id: '10',
@@ -198,20 +213,34 @@ describe('all middleware combined', function () {
             id: 'nextsession',
             name: 'nextsession',
             about: 'testid',
+            picture: 'nextsession',
           },
           id: '15',
           name: 'Person 5',
           about: 'I\'m awesome',
+          picture: {
+            $$sessionMeta: {
+              url: 'nextsession',
+            },
+            url: 'http://',
+          },
         },
         [cacheKey('node', { id: '16' })]: {
           $$sessionMeta: {
             id: 'nextsession',
             name: 'nextsession',
             about: 'nextsession',
+            picture: 'testid',
           },
           id: '16',
           name: 'Some place!',
           about: 'This place is awesome',
+          picture: {
+            $$sessionMeta: {
+              url: 'testid',
+            },
+            url: 'http://',
+          },
         },
         user: {
           id: '10',

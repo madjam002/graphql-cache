@@ -5,6 +5,7 @@ import {expect} from 'chai'
 import gql from 'graphql-tag'
 import {print} from 'graphql-tag/printer'
 import {cacheQueryResult, passThroughQuery} from '../../../'
+import {cacheKey} from '../../../util'
 import {sessionValidation} from '../index'
 
 describe('middleware/session-validation', function () {
@@ -254,7 +255,7 @@ describe('middleware/session-validation', function () {
           id: '10',
           name: 'John Smith',
           dateOfBirth: '2016-09-20 10:00',
-          someNullValue: undefined,
+          someNullValue: null,
           oldData: 'hi',
           photo: null,
         },
@@ -284,6 +285,14 @@ describe('middleware/session-validation', function () {
               name
               about
             }
+            moreFriends: friends(first: $friendCount) {
+              edges {
+                node {
+                  name
+                  about
+                }
+              }
+            }
           }
         }
 
@@ -291,6 +300,10 @@ describe('middleware/session-validation', function () {
           interests
         }
       `
+
+      const variables = {
+        friendCount: 20,
+      }
 
       const cache = {
         user: {
@@ -302,11 +315,13 @@ describe('middleware/session-validation', function () {
             bestFriend: 'mysession',
             picture: 'lastsession',
             url: 'mysession',
+            [cacheKey('friends', { first: 20 })]: 'mysession',
           },
           id: '10',
           name: 'John Smith',
           about: 'I am awesome',
           interests: 'GraphQL',
+          dateOfBirth: 'whatever',
           picture: null,
           url: 'http://',
           bestFriend: {
@@ -341,12 +356,29 @@ describe('middleware/session-validation', function () {
               about: 'about me', // need to fetch because it's from last session
             },
           ],
+          [cacheKey('friends', { first: 20 })]: {
+            edges: [
+              {
+                $$sessionMeta: {
+                  node: 'mysession',
+                },
+                node: {
+                  $$sessionMeta: {
+                    name: 'mysession',
+                    about: 'mysession',
+                  },
+                  name: 'Person 2',
+                  about: 'about me',
+                },
+              },
+            ],
+          },
         },
       }
 
       const oldQuery = _.cloneDeep(query)
 
-      const newQuery = print(passThroughQuery(cache, query, null, sessionValidation({
+      const newQuery = print(passThroughQuery(cache, query, variables, sessionValidation({
         sessionId: 'mysession',
       })))
 

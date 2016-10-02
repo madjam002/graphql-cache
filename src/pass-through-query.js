@@ -129,7 +129,7 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
           } else if (Array.isArray(cachedValue)) {
             pushToStack(cacheStack, cachedValue)
 
-            const newNode = visitArray(rootAst, node, cacheStack, variables, middleware)
+            const newNode = visitArray(rootAst, node, cacheStack, cacheKey, variables, middleware)
 
             skipAfter = newNode
 
@@ -293,14 +293,14 @@ function getCacheKey(node, variables) {
   return baseName + '|' + JSON.stringify(args)
 }
 
-function visitArray(rootAst, node, cacheStack, variables, middleware) {
+function visitArray(rootAst, node, cacheStack, cacheKey, variables, middleware) {
   const cacheStackTop = getTopOfStack(cacheStack)
 
   let lastAst = node
 
   cacheStackTop.forEach(element => {
     pushToStack(cacheStack, element)
-    callMiddleware(middleware, 'passThroughQuery', 'enterSelectionSet', lastAst, cacheStack)
+    callMiddleware(middleware, 'passThroughQuery', 'enterSelectionSet', lastAst, cacheStack, cacheKey)
 
     lastAst = {
       ...lastAst,

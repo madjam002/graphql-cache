@@ -59,7 +59,9 @@ function visitTree(ast, cacheStack, resultStack, middleware = []) {
             callMiddleware(middleware, 'cacheQueryResult', 'enterSelectionSet', node, cacheStack, resultStack)
           }
         } else {
-          cacheStackTop[cacheKey] = resultStackTop[resultKey]
+          if (resultStackTop[resultKey] !== undefined) {
+            cacheStackTop[cacheKey] = resultStackTop[resultKey]
+          }
         }
       }
     },

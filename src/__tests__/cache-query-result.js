@@ -257,7 +257,7 @@ describe('cacheQueryResult', function () {
           id: '10',
           name: 'John Smith',
           dateOfBirth: '2016-09-20 10:00',
-          someNullValue: undefined,
+          someNullValue: null,
           oldData: 'hi',
           photo: null,
         },

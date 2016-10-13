@@ -164,6 +164,40 @@ describe('passThroughQuery', function () {
     `))
   })
 
+  it('should remove unused variables', function () {
+    const query = gql`
+      query($userId: ID!, $eventId: ID!) {
+        user(id: $userId) {
+          id
+          name
+        }
+
+        event(id: $eventId) {
+          name
+        }
+      }
+    `
+
+    const cache = {
+      [cacheKey('user', { id: '10' })]: {
+        id: '10',
+        name: 'John Smith',
+      },
+    }
+
+    const variables = { userId: '10', eventId: '11' }
+
+    const newQuery = print(passThroughQuery(cache, query, variables))
+
+    expect(newQuery).to.equal(print(gql`
+      query($eventId: ID!) {
+        event(id: $eventId) {
+          name
+        }
+      }
+    `))
+  })
+
   it('should take a complex query and result and return it in a cached format', function () {
     const query = gql`
       fragment Bar on User {

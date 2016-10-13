@@ -20,6 +20,7 @@ export function passThroughQuery(cache, query, variables = null, ...middleware) 
 
   const astPendingDeletion = visitTree(rootAst, rootAst, [cache], variables, middleware)
   let newAst = visitTreeDeleteUnusedFragments(visitTreeDeleteNodes(astPendingDeletion))
+  newAst = visitTreeDeleteUnusedVariables(newAst)
 
   // allow for middleware to have "after" hooks to change AST
   if (middleware) {
@@ -227,6 +228,50 @@ function visitTreeDeleteUnusedFragments(ast) {
 
         if (!usedFragments.includes(nameOfFragment)) {
           return VISIT_REMOVE_NODE
+        }
+      }
+    },
+  })
+}
+
+function visitTreeDeleteUnusedVariables(ast) {
+  let usedVariables = null
+  let insideSelectionSet = false
+
+  return visit(ast, {
+    enter(node) {
+      if (node.kind === 'OperationDefinition' && node.operation === 'query') {
+        usedVariables = []
+
+        return
+      }
+
+      if (node.kind === 'SelectionSet') {
+        insideSelectionSet = true
+
+        return
+      }
+
+      if (insideSelectionSet && node.kind === 'Variable') {
+        const variableName = node.name.value
+
+        usedVariables.push(variableName)
+        return
+      }
+    },
+    leave(node) {
+      if (node.kind === 'SelectionSet') {
+        insideSelectionSet = false
+
+        return
+      }
+
+      if (node.kind === 'OperationDefinition' && node.operation === 'query') {
+        return {
+          ...node,
+          variableDefinitions: node.variableDefinitions.filter(definition =>
+            usedVariables.includes(definition.variable.name.value)
+          ),
         }
       }
     },

@@ -166,13 +166,21 @@ describe('passThroughQuery', function () {
 
   it('should remove unused variables', function () {
     const query = gql`
-      query($userId: ID!, $eventId: ID!) {
+      query($userId: ID!, $eventId: ID!, $count: Int!) {
         user(id: $userId) {
           id
           name
         }
 
         event(id: $eventId) {
+          name
+          ...Event
+        }
+      }
+
+      fragment Event on Event {
+        picture { url }
+        going(first: $count) {
           name
         }
       }
@@ -185,13 +193,21 @@ describe('passThroughQuery', function () {
       },
     }
 
-    const variables = { userId: '10', eventId: '11' }
+    const variables = { userId: '10', eventId: '11', count: '30' }
 
     const newQuery = print(passThroughQuery(cache, query, variables))
 
     expect(newQuery).to.equal(print(gql`
-      query($eventId: ID!) {
+      query($eventId: ID!, $count: Int!) {
         event(id: $eventId) {
+          name
+          ...Event
+        }
+      }
+
+      fragment Event on Event {
+        picture { url }
+        going(first: $count) {
           name
         }
       }

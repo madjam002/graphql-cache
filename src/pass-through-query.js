@@ -236,36 +236,17 @@ function visitTreeDeleteUnusedFragments(ast) {
 
 function visitTreeDeleteUnusedVariables(ast) {
   let usedVariables = null
-  let insideSelectionSet = false
 
   return visit(ast, {
     enter(node) {
       if (node.kind === 'OperationDefinition' && node.operation === 'query') {
         usedVariables = []
 
-        return
-      }
-
-      if (node.kind === 'SelectionSet') {
-        insideSelectionSet = true
-
-        return
-      }
-
-      if (insideSelectionSet && node.kind === 'Variable') {
-        const variableName = node.name.value
-
-        usedVariables.push(variableName)
+        trackUsedVariables(ast, node, usedVariables)
         return
       }
     },
     leave(node) {
-      if (node.kind === 'SelectionSet') {
-        insideSelectionSet = false
-
-        return
-      }
-
       if (node.kind === 'OperationDefinition' && node.operation === 'query') {
         return {
           ...node,
@@ -273,6 +254,34 @@ function visitTreeDeleteUnusedVariables(ast) {
             usedVariables.includes(definition.variable.name.value)
           ),
         }
+      }
+    },
+  })
+}
+
+function trackUsedVariables(document, ast, usedVariables) {
+  return visit(ast, {
+    enter(node) {
+      if (node.kind === 'VariableDefinition') {
+        return false
+      }
+
+      if (node.kind === 'Variable') {
+        const variableName = node.name.value
+
+        usedVariables.push(variableName)
+        return
+      }
+
+      if (node.kind === 'FragmentSpread') {
+        const nameOfFragment = node.name.value
+        const fragment = getFragment(document, nameOfFragment)
+
+        if (!fragment) {
+          return
+        }
+
+        trackUsedVariables(document, fragment, usedVariables)
       }
     },
   })

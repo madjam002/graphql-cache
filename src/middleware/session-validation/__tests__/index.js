@@ -397,6 +397,7 @@ describe('middleware/session-validation', function () {
               }
             }
             friends {
+              name
               about
             }
           }

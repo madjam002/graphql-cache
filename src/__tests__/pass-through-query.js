@@ -61,6 +61,82 @@ describe('passThroughQuery', function () {
     expect(newQuery).to.be.null
   })
 
+  it('should take a query with an array which requests fields which are already in the cache', function () {
+    const query = gql`
+      query {
+        user {
+          id
+          name
+          friends {
+            id
+            name
+          }
+        }
+      }
+    `
+
+    const cache = {
+      user: {
+        id: '10',
+        friends: [
+          { id: '11', name: 'Foo bar' },
+          { id: '12', name: 'Jane Smith' },
+        ],
+      },
+    }
+
+    const newQuery = print(passThroughQuery(cache, query))
+
+    expect(newQuery).to.equal(print(gql`
+      query {
+        user {
+          name
+        }
+      }
+    `))
+  })
+
+  it('should take a query with an array which requests more fields that aren\'t in the cache', function () {
+    const query = gql`
+      query {
+        user {
+          id
+          friends {
+            id
+            name
+            dateOfBirth
+          }
+        }
+      }
+    `
+
+    const cache = {
+      user: {
+        id: '10',
+        friends: [
+          { id: '11', name: 'Foo bar' },
+          { id: '12', name: 'Jane Smith' },
+        ],
+      },
+    }
+
+    const newQuery = print(passThroughQuery(cache, query))
+
+    expect(newQuery).to.equal(print(gql`
+      query {
+        user {
+          # request all fields again because there might be more records returned from the server
+          # and we'll need all of the fields for those records
+          friends {
+            id
+            name
+            dateOfBirth
+          }
+        }
+      }
+    `))
+  })
+
   it('should take a simple cache state and query with fragments and return null if all data requested is in cache', function () {
     const query = gql`
       query($userId: ID!) {
@@ -153,12 +229,24 @@ describe('passThroughQuery', function () {
       query {
         feed {
           items {
+            id
+            __typename
+            ...PlantItem
             ...InsectItem
+            ...on Grass {
+              type
+            }
           }
         }
       }
 
+      fragment PlantItem on Plant {
+        name
+        colour
+      }
+
       fragment InsectItem on Insect {
+        name
         speed
       }
     `))
@@ -348,6 +436,7 @@ describe('passThroughQuery', function () {
       fragment Foo on User {
         someOtherConnection {
           id
+          name
         }
         ...Baz
       }
@@ -356,7 +445,13 @@ describe('passThroughQuery', function () {
         user {
           about
           otherFriendsDynamic: friends(limit: $someLimit) { id, name }
-          relatedFriends { name, ...Another }
+          relatedFriends {
+            id
+            name
+            friends(limit: $justOne) { name }
+            ...Another
+            ...AndAnother
+          }
           ...Foo
           dateOfBirth
         }
@@ -364,12 +459,18 @@ describe('passThroughQuery', function () {
 
       fragment Baz on User {
         reallyAnotherConnection {
+          id
           name
         }
       }
 
       fragment Another on User {
         about
+        interests
+      }
+
+      fragment AndAnother on User {
+        id
       }
     `))
   })

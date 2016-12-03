@@ -82,6 +82,28 @@ export function isMarkedForDeletion(node) {
   return node && node.__shouldDelete === true
 }
 
+export function recursivelyMarkAsKeep(rootAst, node) {
+  return visit(node, {
+    enter(node) {
+      if (node.kind === 'Field') {
+        return markAsKeep(node)
+      }
+
+      if (node.kind === 'FragmentSpread') {
+        const nameOfFragment = node.name.value
+        const fragment = getFragment(rootAst, nameOfFragment)
+
+        const newFragment = {
+          ...fragment,
+          selectionSet: recursivelyMarkAsKeep(rootAst, fragment.selectionSet),
+        }
+
+        replaceFragment(rootAst, nameOfFragment, newFragment)
+      }
+    },
+  })
+}
+
 /**
  * Returns a new node with selectionSet, where the selectionSet will contain
  * the given field.
@@ -105,6 +127,19 @@ function getFragment(ast, name) {
   const { definitions } = ast
 
   return definitions.find(def => def.name && def.name.value === name)
+}
+
+export function replaceFragment(ast, name, newFragment) {
+  if (ast.kind !== 'Document') {
+    throw new Error('replaceFragment(): ast.kind is not Document')
+  }
+
+  const { definitions } = ast
+
+  const found = definitions.find(def => def.name && def.name.value === name)
+
+  Object.assign(found, newFragment)
+  return
 }
 
 function ensureSelectionsHasField(selections, field) {

@@ -461,13 +461,24 @@ describe('middleware/normalize-entities', function () {
         query {
           feed {
             items {
-              ...InsectItem
               id
+              __typename
+              ...PlantItem
+              ...InsectItem
+              ...on Grass {
+                type
+              }
             }
           }
         }
 
+        fragment PlantItem on Plant {
+          name
+          colour
+        }
+
         fragment InsectItem on Insect {
+          name
           speed
         }
       `))
@@ -723,6 +734,7 @@ describe('middleware/normalize-entities', function () {
         fragment Foo on User {
           someOtherConnection {
             id
+            name
           }
           ...Baz
         }
@@ -731,7 +743,13 @@ describe('middleware/normalize-entities', function () {
           user {
             about
             otherFriendsDynamic: friends(limit: $someLimit) { id, name }
-            relatedFriends { ...Another, id }
+            relatedFriends {
+              id
+              name
+              friends(limit: $justOne) { name, id }
+              ...Another
+              ...AndAnother
+            }
             ...Foo
             dateOfBirth
             id
@@ -747,6 +765,11 @@ describe('middleware/normalize-entities', function () {
 
         fragment Another on User {
           about
+          interests
+        }
+
+        fragment AndAnother on User {
+          id
         }
       `))
     })

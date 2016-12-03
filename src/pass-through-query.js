@@ -7,6 +7,8 @@ import {
   markAsKeep,
   markAsShouldDelete,
   isMarkedForDeletion,
+  recursivelyMarkAsKeep,
+  replaceFragment,
 } from './util'
 
 const VISIT_REMOVE_NODE = null
@@ -176,6 +178,29 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
         const selectionSet = node.selectionSet
 
         if (selectionSet) {
+          const cachedValue = getTopOfStack(cacheStack)
+
+          if (Array.isArray(cachedValue)) {
+            let hasFields = false
+            let hasDeletedFields = false
+
+            for (const selection of selectionSet.selections) {
+              if (isMarkedForDeletion(selection)) {
+                hasDeletedFields = true
+              } else {
+                hasFields = true
+              }
+            }
+
+            if (hasFields && hasDeletedFields) {
+              // array is querying for new fields, which means fetching from the server,
+              // which means that now records could be returned from the server, WHICH MEANS (!!!)
+              // we need to query for all fields in case of new records
+
+              node = recursivelyMarkAsKeep(rootAst, node)
+            }
+          }
+
           const res = callMiddleware(middleware, 'passThroughQuery', 'leaveSelectionSet', node, cacheStack)
 
           popTopFromStack(cacheStack)
@@ -183,6 +208,8 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
           if (res !== undefined) {
             return res
           }
+
+          return node
         }
       }
     },
@@ -306,19 +333,6 @@ function getFragment(ast, name) {
   const { definitions } = ast
 
   return definitions.find(def => def.name && def.name.value === name)
-}
-
-function replaceFragment(ast, name, newFragment) {
-  if (ast.kind !== 'Document') {
-    throw new Error('replaceFragment(): ast.kind is not Document')
-  }
-
-  const { definitions } = ast
-
-  const found = definitions.find(def => def.name && def.name.value === name)
-
-  Object.assign(found, newFragment)
-  return
 }
 
 function getCacheKey(node, variables) {

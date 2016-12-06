@@ -71,7 +71,9 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
         if (onType && cacheStackTop && cacheStackTop.__typename) {
           if (onType !== cacheStackTop.__typename) {
             // if types don't match, skip
-            return false
+            const newNode = markAsShouldDelete(node)
+            skipAfter = newNode
+            return newNode
           }
         }
       }
@@ -86,7 +88,9 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
         if (onType && cacheStackTop && cacheStackTop.__typename) {
           if (onType !== cacheStackTop.__typename) {
             // if types don't match, skip
-            return false
+            const newNode = markAsShouldDelete(node)
+            skipAfter = newNode
+            return newNode
           }
         }
 
@@ -220,7 +224,7 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
 function visitTreeDeleteNodes(ast) {
   return visit(ast, {
     enter(node) {
-      if (isMarkedForDeletion(node) && node.kind === 'Field') {
+      if (isMarkedForDeletion(node)) {
         return VISIT_REMOVE_NODE
       }
     },
@@ -325,6 +329,33 @@ function removeEmptySelectionSets(node) {
   }
 }
 
+function removeUnusedFieldsFromArray(rootAst, ast) {
+  return visit(ast, {
+    leave(node) {
+      if (node.kind === 'InlineFragment' && node.selectionSet && isMarkedForDeletion(node)) {
+        for (const selection of node.selectionSet.selections) {
+          if (!isMarkedForDeletion(selection)) {
+            return markAsKeep(node)
+          }
+        }
+      }
+
+      if (isMarkedForDeletion(node)) {
+        if (node.kind === 'FragmentSpread') {
+          const nameOfFragment = node.name.value
+          const fragment = getFragment(rootAst, nameOfFragment)
+
+          for (const selection of fragment.selectionSet.selections) {
+            if (!isMarkedForDeletion(selection)) {
+              return markAsKeep(node)
+            }
+          }
+        }
+      }
+    },
+  })
+}
+
 function getFragment(ast, name) {
   if (ast.kind !== 'Document') {
     throw new Error('getFragment(): ast.kind is not Document')
@@ -383,5 +414,5 @@ function visitArray(rootAst, node, cacheStack, cacheKey, variables, middleware) 
     }
   })
 
-  return lastAst
+  return removeUnusedFieldsFromArray(rootAst, lastAst)
 }

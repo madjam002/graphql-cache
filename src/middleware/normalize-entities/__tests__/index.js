@@ -484,6 +484,72 @@ describe('middleware/normalize-entities', function () {
       `))
     })
 
+    it('should take a simple cache state and query and return null with fragments on an interface with all data already in cache', function () {
+      const query = gql`
+        query {
+          feed {
+            items {
+              id
+              __typename
+              ...PlantItem
+              ...InsectItem
+              ...on Grass {
+                type
+              }
+            }
+          }
+        }
+
+        fragment PlantItem on Plant {
+          name
+          colour
+        }
+
+        fragment InsectItem on Insect {
+          name
+          speed
+        }
+      `
+
+      const cache = {
+        [cacheKey('node', { id: '1' })]: {
+          id: '1',
+          __typename: 'Plant',
+          name: 'Conifer',
+          colour: 'green',
+        },
+        [cacheKey('node', { id: '2' })]: {
+          id: '2',
+          __typename: 'Grass',
+          type: 'unknown',
+        },
+        [cacheKey('node', { id: '3' })]: {
+          id: '3',
+          __typename: 'Insect',
+          name: 'Bee',
+          speed: 13,
+        },
+        [cacheKey('node', { id: '4' })]: {
+          id: '4',
+          __typename: 'Insect',
+          name: 'Wasp',
+          speed: 14,
+        },
+        feed: {
+          items: [
+            { id: '1' },
+            { id: '2' },
+            { id: '3' },
+            { id: '4' },
+          ],
+        },
+      }
+
+      const newQuery = print(passThroughQuery(cache, query, null, normalizeEntities))
+
+      expect(newQuery).to.be.null
+    })
+
     it('should take a complex cache state with normalized entities and query and remove unnecessary fields', function () {
       const query = gql`
         query {

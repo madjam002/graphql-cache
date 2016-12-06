@@ -63,7 +63,7 @@ export function simplifyAst(ast, variables = {}) {
 }
 
 export function markAsShouldDelete(node) {
-  if (node.__shouldDelete !== undefined) return
+  if (node.__shouldDelete !== undefined) return node
 
   return {
     ...node,
@@ -85,7 +85,7 @@ export function isMarkedForDeletion(node) {
 export function recursivelyMarkAsKeep(rootAst, node) {
   return visit(node, {
     enter(node) {
-      if (node.kind === 'Field') {
+      if (node.kind === 'Field' || node.kind === 'InlineFragment') {
         return markAsKeep(node)
       }
 
@@ -99,6 +99,8 @@ export function recursivelyMarkAsKeep(rootAst, node) {
         }
 
         replaceFragment(rootAst, nameOfFragment, newFragment)
+
+        return markAsKeep(node)
       }
     },
   })

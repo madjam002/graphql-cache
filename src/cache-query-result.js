@@ -16,6 +16,10 @@ function visitTree(ast, cacheStack, resultStack, middleware = []) {
   visit(ast, {
 
     enter(node, key, parent, path, ancestors) {
+      if (node.kind === 'OperationDefinition' && node.operation === 'query' && node.selectionSet) {
+        callMiddleware(middleware, 'cacheQueryResult', 'enterQuery', node, cacheStack, resultStack)
+      }
+
       if (node.kind === 'Field') {
         const cacheStackTop = getTopOfStack(cacheStack)
         const resultStackTop = getTopOfStack(resultStack)
@@ -69,6 +73,10 @@ function visitTree(ast, cacheStack, resultStack, middleware = []) {
     },
 
     leave(node) {
+      if (node.kind === 'OperationDefinition' && node.operation === 'query' && node.selectionSet) {
+        callMiddleware(middleware, 'cacheQueryResult', 'leaveQuery', node, cacheStack, resultStack)
+      }
+
       if (node.kind === 'Field') {
         const selectionSet = node.selectionSet
 

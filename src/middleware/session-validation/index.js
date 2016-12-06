@@ -22,6 +22,21 @@ export const sessionValidation = (opts = { sessionId: null }) => ({
 
       dataInCache[STORAGE_KEY] = meta
     },
+    leaveQuery(node, cacheStack, resultStack) {
+      const data = getTopOfStack(resultStack)
+      const dataInCache = getTopOfStack(cacheStack)
+
+      const meta = {
+        ...dataInCache[STORAGE_KEY],
+      }
+
+      for (const k in data) {
+        if (k === STORAGE_KEY) continue
+        meta[k] = opts.sessionId
+      }
+
+      dataInCache[STORAGE_KEY] = meta
+    },
   },
   passThroughQuery: {
     enterField(node, cacheStack, cacheKey) {

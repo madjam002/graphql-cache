@@ -15,6 +15,9 @@ describe('all middleware combined', function () {
     it('should store the session ID against data in the cache from a simple query with existing cache data', function () {
       const query = gql`
         query($limit: Int) {
+          isFirstRun
+          isWorking
+
           user {
             id
             name
@@ -52,6 +55,8 @@ describe('all middleware combined', function () {
       const variables = { limit: 10 }
 
       const result = {
+        isFirstRun: false,
+        isWorking: true,
         user: {
           id: '10',
           name: 'John Smith',
@@ -159,6 +164,15 @@ describe('all middleware combined', function () {
       }), normalizeEntities)
 
       expect(cache).to.eql({
+        $$sessionMeta: {
+          feed: 'nextsession',
+          isFirstRun: 'nextsession',
+          isWorking: 'nextsession',
+          otherUser: 'nextsession',
+          user: 'nextsession',
+        },
+        isFirstRun: false,
+        isWorking: true,
         [cacheKey('node', { id: '10' })]: {
           $$sessionMeta: {
             id: 'nextsession',

@@ -51,6 +51,10 @@ describe('middleware/session-validation', function () {
       }))
 
       expect(cache).to.eql({
+        $$sessionMeta: {
+          otherUser: 'testid',
+          user: 'testid',
+        },
         user: {
           $$sessionMeta: {
             id: 'testid',
@@ -162,6 +166,10 @@ describe('middleware/session-validation', function () {
       }))
 
       expect(cache).to.eql({
+        $$sessionMeta: {
+          user: 'nextsession',
+          otherUser: 'nextsession',
+        },
         user: {
           $$sessionMeta: {
             id: 'nextsession',
@@ -243,6 +251,9 @@ describe('middleware/session-validation', function () {
       }))
 
       expect(cache).to.eql({
+        $$sessionMeta: {
+          user: 'nextsession',
+        },
         user: {
           $$sessionMeta: {
             id: 'nextsession',
@@ -267,6 +278,7 @@ describe('middleware/session-validation', function () {
     it('should request fields which are present in cache from another session', function () {
       const query = gql`
         query {
+          isFirstRun
           user {
             id
             name
@@ -306,6 +318,10 @@ describe('middleware/session-validation', function () {
       }
 
       const cache = {
+        $$sessionMeta: {
+          isFirstRun: 'mysession',
+        },
+        isFirstRun: false,
         user: {
           $$sessionMeta: {
             id: 'mysession',

@@ -314,6 +314,52 @@ describe('passThroughQuery', function () {
     expect(newQuery).to.be.null
   })
 
+  it('should take a simple cache state and return null with only one type being used with all data already in cache', function () {
+    const query = gql`
+      query {
+        feed {
+          items {
+            id
+            __typename
+            ...PlantItem
+            ...InsectItem
+            ...on Grass {
+              type
+            }
+          }
+        }
+      }
+
+      fragment PlantItem on Plant {
+        name
+        colour
+      }
+
+      fragment InsectItem on Insect {
+        name
+        speed
+        colour
+      }
+    `
+
+    const cache = {
+      feed: {
+        items: [
+          {
+            id: '1',
+            __typename: 'Plant',
+            name: 'Conifer',
+            colour: 'green',
+          },
+        ],
+      },
+    }
+
+    const newQuery = print(passThroughQuery(cache, query))
+
+    expect(newQuery).to.be.null
+  })
+
   it('should remove unused variables', function () {
     const query = gql`
       query($userId: ID!, $eventId: ID!, $count: Int!) {

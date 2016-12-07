@@ -188,13 +188,24 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
             let hasFields = false
             let hasDeletedFields = false
 
-            for (const selection of selectionSet.selections) {
-              if (isMarkedForDeletion(selection)) {
-                hasDeletedFields = true
-              } else {
-                hasFields = true
-              }
-            }
+            visit(selectionSet, {
+              enter(node) {
+                if (isMarkedForDeletion(node)) {
+                  hasDeletedFields = true
+                  return false
+                } else if (node.kind === 'Field') {
+                  hasFields = true
+                  return false
+                } else if (node.kind === 'FragmentSpread') {
+                  const nameOfFragment = node.name.value
+                  const fragment = getFragment(ast, nameOfFragment)
+                  const res = checkFragmentForDeletedFields(rootAst, fragment)
+
+                  if (res.hasDeletedFields) hasDeletedFields = true
+                  if (res.hasFields) hasFields = true
+                }
+              },
+            })
 
             if (hasFields && hasDeletedFields) {
               // array is querying for new fields, which means fetching from the server,
@@ -219,6 +230,32 @@ function visitTree(rootAst, ast, cacheStack, variables, middleware = [], insideQ
     },
 
   })
+}
+
+function checkFragmentForDeletedFields(rootAst, fragment) {
+  let hasFields = false
+  let hasDeletedFields = false
+
+  visit(fragment, {
+    enter(node) {
+      if (isMarkedForDeletion(node)) {
+        hasDeletedFields = true
+        return false
+      } else if (node.kind === 'Field') {
+        hasFields = true
+        return false
+      } else if (node.kind === 'FragmentSpread') {
+        const nameOfFragment = node.name.value
+        const fragment = getFragment(rootAst, nameOfFragment)
+        const res = checkFragmentForDeletedFields(rootAst, fragment)
+
+        if (res.hasDeletedFields) hasDeletedFields = true
+        if (res.hasFields) hasFields = true
+      }
+    },
+  })
+
+  return { hasFields, hasDeletedFields }
 }
 
 function visitTreeDeleteNodes(ast) {
@@ -334,7 +371,7 @@ function removeUnusedFieldsFromArray(rootAst, ast) {
     leave(node) {
       if (node.kind === 'InlineFragment' && node.selectionSet && isMarkedForDeletion(node)) {
         for (const selection of node.selectionSet.selections) {
-          if (!isMarkedForDeletion(selection)) {
+          if (selection.__shouldDelete === false) {
             return markAsKeep(node)
           }
         }
@@ -346,7 +383,7 @@ function removeUnusedFieldsFromArray(rootAst, ast) {
           const fragment = getFragment(rootAst, nameOfFragment)
 
           for (const selection of fragment.selectionSet.selections) {
-            if (!isMarkedForDeletion(selection)) {
+            if (selection.__shouldDelete === false) {
               return markAsKeep(node)
             }
           }
